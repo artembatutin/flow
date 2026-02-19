@@ -8,6 +8,7 @@
 import Foundation
 import AVFoundation
 import Combine
+import CoreAudio
 
 enum AudioEngineError: LocalizedError {
     case permissionDenied
@@ -76,6 +77,8 @@ class AudioEngine: ObservableObject {
     private var silenceStartTime: Date?
     
     private var levelUpdateTask: Task<Void, Never>?
+    private var audioDeviceListener: AudioObjectPropertyListenerBlock?
+    private var isRestartingEngine: Bool = false
     
     // Callback for when max duration or silence auto-stop triggers
     var onAutoStop: (() -> Void)?
@@ -366,6 +369,7 @@ class AudioEngine: ObservableObject {
     private func cleanup() {
         stopDurationTimer()
         levelUpdateTask?.cancel()
+        removeCoreAudioDeviceListener()
         
         if isRecording {
             inputNode?.removeTap(onBus: 0)
@@ -394,31 +398,135 @@ class AudioEngine: ObservableObject {
             }
         }
         
-        // Listen for default audio device changes
-        NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("AVAudioDeviceDidChangeNotification"),
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.handleDeviceChange()
-            }
-        }
+        // Listen for default input device changes via CoreAudio
+        setupCoreAudioDeviceListener()
     }
     
     private func handleConfigurationChange(_ notification: Notification) {
         // Handle audio device changes - the engine configuration changed
+        // Automatically restart with the new default input device
         if isRecording {
-            // Stop and notify - let the caller decide whether to restart
-            onAutoStop?()
+            restartRecordingWithNewDevice()
         }
     }
     
     private func handleDeviceChange() {
-        // Handle audio device changes (e.g., headphones connected/disconnected)
+        // Handle audio device changes (e.g., microphone switched when docking/undocking)
         if isRecording {
-            onAutoStop?()
+            restartRecordingWithNewDevice()
         }
+    }
+    
+    private func restartRecordingWithNewDevice() {
+        guard isRecording, !isRestartingEngine else { return }
+        isRestartingEngine = true
+        
+        // Tear down current engine but preserve recording state and collected buffers
+        inputNode?.removeTap(onBus: 0)
+        audioEngine?.stop()
+        audioEngine = nil
+        inputNode = nil
+        
+        // Brief delay to let the system settle on the new audio device
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
+            guard let self = self, self.isRecording else {
+                self?.isRestartingEngine = false
+                return
+            }
+            
+            do {
+                let engine = AVAudioEngine()
+                self.audioEngine = engine
+                
+                let newInputNode = engine.inputNode
+                self.inputNode = newInputNode
+                
+                let nativeFormat = newInputNode.outputFormat(forBus: 0)
+                
+                guard nativeFormat.sampleRate > 0 else {
+                    throw AudioEngineError.noInputNode
+                }
+                
+                guard let targetFormat = AVAudioFormat(
+                    commonFormat: .pcmFormatFloat32,
+                    sampleRate: self.configuration.sampleRate,
+                    channels: self.configuration.channelCount,
+                    interleaved: false
+                ) else {
+                    throw AudioEngineError.formatConversionFailed
+                }
+                
+                let converter: AVAudioConverter?
+                if nativeFormat.sampleRate != self.configuration.sampleRate || nativeFormat.channelCount != self.configuration.channelCount {
+                    converter = AVAudioConverter(from: nativeFormat, to: targetFormat)
+                } else {
+                    converter = nil
+                }
+                
+                let bufferSize: AVAudioFrameCount = 4096
+                
+                newInputNode.installTap(onBus: 0, bufferSize: bufferSize, format: nativeFormat) { [weak self] buffer, time in
+                    Task { @MainActor [weak self] in
+                        self?.processAudioBuffer(buffer, converter: converter, targetFormat: targetFormat)
+                    }
+                }
+                
+                engine.prepare()
+                try engine.start()
+                
+                self.isRestartingEngine = false
+                
+            } catch {
+                // Failed to restart with new device, stop recording
+                self.isRecording = false
+                self.audioLevel = 0.0
+                self.stopDurationTimer()
+                self.audioBuffers.removeAll()
+                self.audioEngine = nil
+                self.inputNode = nil
+                self.isRestartingEngine = false
+                self.onAutoStop?()
+            }
+        }
+    }
+    
+    private func setupCoreAudioDeviceListener() {
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        
+        let listener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.handleDeviceChange()
+            }
+        }
+        audioDeviceListener = listener
+        
+        _ = AudioObjectAddPropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            DispatchQueue.main,
+            listener
+        )
+    }
+    
+    private func removeCoreAudioDeviceListener() {
+        guard let listener = audioDeviceListener else { return }
+        var propertyAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        _ = AudioObjectRemovePropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject),
+            &propertyAddress,
+            DispatchQueue.main,
+            listener
+        )
+        audioDeviceListener = nil
     }
 }
 

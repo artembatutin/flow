@@ -45,3 +45,10 @@ fastlane/test_output/
 
 # IDE helpers
 .idea/
+
+# Distribution artifacts
+*.dmg
+*.pkg
+*.app
+Releases/
+Distribution/

@@ -40,7 +40,11 @@ class AppDependencies {
     /// The target application to inject text into (captured when recording starts)
     private var targetApp: NSRunningApplication?
 
-    private func shouldEnableCodeSymbols(for bundleId: String?) -> Bool {
+    private static func shouldEnableCodeSymbols(
+        settingsStore: SettingsStore,
+        adapterRegistry: AdapterRegistry,
+        bundleId: String?
+    ) -> Bool {
         switch settingsStore.codeSymbolsMode {
         case .off:
             return false
@@ -51,6 +55,14 @@ class AppDependencies {
             let adapter = adapterRegistry.getAdapter(for: bundleId)
             return adapter is IDEAdapter || adapter is TerminalAdapter || adapter is ClaudeCodeAdapter
         }
+    }
+
+    private func shouldEnableCodeSymbols(for bundleId: String?) -> Bool {
+        Self.shouldEnableCodeSymbols(
+            settingsStore: settingsStore,
+            adapterRegistry: adapterRegistry,
+            bundleId: bundleId
+        )
     }
     
     private init() {
@@ -103,7 +115,11 @@ class AppDependencies {
         self.syntaxTransformer = SyntaxTransformer()
         self.syntaxTransformer.caseTransformationsEnabled = settingsStore.caseTransformationsEnabled
         self.syntaxTransformer.cliPatternsEnabled = settingsStore.cliPatternsEnabled
-        self.syntaxTransformer.codeSymbolsEnabled = shouldEnableCodeSymbols(for: nil)
+        self.syntaxTransformer.codeSymbolsEnabled = Self.shouldEnableCodeSymbols(
+            settingsStore: settingsStore,
+            adapterRegistry: adapterRegistry,
+            bundleId: nil
+        )
         
         // Initialize file tagging system
         self.workspaceScanner = WorkspaceScanner()
