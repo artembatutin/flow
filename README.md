@@ -1,8 +1,8 @@
-# FlowPrompter
+# Flow
 
-A powerful macOS application that transforms your speech into intelligent, context-aware text for seamless integration with AI-powered development environments. FlowPrompter bridges the gap between voice dictation and modern IDEs, providing real-time transcription with advanced features like IDE file tagging, personal dictionaries, and syntax-aware dictation.
+A powerful macOS application that transforms your speech into intelligent, context-aware text for seamless integration with AI-powered development environments. Flow bridges the gap between voice dictation and modern IDEs, providing real-time transcription with advanced features like IDE file tagging, personal dictionaries, and syntax-aware dictation.
 
-![FlowPrompter Menu](docs/images/menu.png)
+![Flow Menu](docs/images/menu.png)
 
 ## 🎯 Key Features
 
@@ -28,7 +28,7 @@ A powerful macOS application that transforms your speech into intelligent, conte
 - **Snippet Library**: Store and insert frequently used code snippets via voice
 - **Usage Dashboard**: Track your dictation patterns and productivity metrics
 
-![FlowPrompter Settings](docs/images/settings.png)
+![Flow Settings](docs/images/settings.png)
 
 ## 🚀 Quick Start
 
@@ -42,23 +42,23 @@ A powerful macOS application that transforms your speech into intelligent, conte
 #### From Source
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/FlowPrompter.git
-   cd FlowPrompter
+   git clone https://github.com/yourusername/Flow.git
+   cd Flow
    ```
 
 2. Open the project in Xcode:
    ```bash
-   open FlowPrompter.xcodeproj
+   open Flow.xcodeproj
    ```
 
 3. Build and run the project (⌘+R)
 
 #### From Release
-Download the latest signed DMG file from the [Releases](https://github.com/yourusername/FlowPrompter/releases) section.
+Download the latest signed DMG file from the [Releases](https://github.com/yourusername/Flow/releases) section.
 
 ## 📖 Documentation
 
-FlowPrompter includes comprehensive documentation for all its features:
+Flow includes comprehensive documentation for all its features:
 
 - **[IDE File Tagging](docs/ide-file-tagging.md)** - Learn how to reference files in your IDE using voice commands
 - **[Personal Dictionary](docs/personal-dictionary.md)** - Customize vocabulary and transformations
@@ -69,15 +69,15 @@ FlowPrompter includes comprehensive documentation for all its features:
 
 ## 🏗️ Architecture
 
-FlowPrompter is built with a clean, modular architecture:
+Flow is built with a clean, modular architecture:
 
 ```
-FlowPrompter/
+Flow/
 ├── Application/          # App lifecycle and dependency management
 ├── Domain/              # Business logic and models
 ├── Infrastructure/      # External integrations and services
 ├── Presentation/        # UI components and views
-└── FlowPrompterApp.swift # Main app entry point
+└── FlowApp.swift # Main app entry point
 ```
 
 ### Core Components
@@ -91,7 +91,7 @@ FlowPrompter/
 
 ## 🔧 Configuration
 
-FlowPrompter offers extensive customization through its settings interface:
+Flow offers extensive customization through its settings interface:
 
 - **Audio Settings**: Microphone selection, noise reduction, sensitivity
 - **Transcription Settings**: Language, punctuation, formatting options
@@ -105,8 +105,8 @@ FlowPrompter offers extensive customization through its settings interface:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/FlowPrompter.git
-   cd FlowPrompter
+   git clone https://github.com/yourusername/Flow.git
+   cd Flow
    ```
 
 2. **Install dependencies**
@@ -116,7 +116,7 @@ FlowPrompter offers extensive customization through its settings interface:
 
 3. **Open in Xcode**
    ```bash
-   open FlowPrompter.xcodeproj
+   open Flow.xcodeproj
    ```
 
 4. **Build and run**
@@ -127,7 +127,7 @@ FlowPrompter offers extensive customization through its settings interface:
 
 ```bash
 # Run unit tests
-xcodebuild test -project FlowPrompter.xcodeproj -scheme FlowPrompter
+xcodebuild test -project Flow.xcodeproj -scheme Flow
 ```
 
 ### Contributing
@@ -140,11 +140,11 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 **Microphone Permission Denied**
 - Go to System Preferences → Security & Privacy → Privacy → Microphone
-- Enable FlowPrompter in the microphone access list
+- Enable Flow in the microphone access list
 
 **IDE Integration Not Working**
 - Ensure your IDE is supported (Cursor, Windsurf, VS Code, Xcode, JetBrains)
-- Check that accessibility permissions are enabled for FlowPrompter
+- Check that accessibility permissions are enabled for Flow
 - Verify workspace scanning is enabled in settings
 
 **Speech Recognition Accuracy**
@@ -160,8 +160,8 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 ### Getting Help
 
 - **Documentation**: Check the `docs/` folder for detailed feature documentation
-- **Issues**: Report bugs and request features on the [GitHub Issues](https://github.com/yourusername/FlowPrompter/issues) page
-- **Discussions**: Join community discussions in the [GitHub Discussions](https://github.com/yourusername/FlowPrompter/discussions) section
+- **Issues**: Report bugs and request features on the [GitHub Issues](https://github.com/yourusername/Flow/issues) page
+- **Discussions**: Join community discussions in the [GitHub Discussions](https://github.com/yourusername/Flow/discussions) section
 
 ## 📄 License
 
@@ -185,4 +185,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for the developer community**
 
-For questions, support, or to contribute, please visit our [GitHub repository](https://github.com/yourusername/FlowPrompter).
+For questions, support, or to contribute, please visit our [GitHub repository](https://github.com/yourusername/Flow).
