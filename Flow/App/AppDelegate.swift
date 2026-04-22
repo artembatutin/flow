@@ -9,8 +9,13 @@ import Cocoa
 import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !isRunningTests else { return }
+
         // Hide from Dock - app runs as menu bar only
         NSApp.setActivationPolicy(.accessory)
         
@@ -25,6 +30,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
+        guard !isRunningTests else { return }
+
         // Stop hotkey listening
         Task { @MainActor in
             AppDependencies.shared.stopHotkeyListening()

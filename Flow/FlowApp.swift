@@ -23,8 +23,7 @@ struct FlowApp: App {
     @StateObject private var inputFieldDetector = AppDependencies.shared.inputFieldDetector
     @StateObject private var snippetManager = AppDependencies.shared.snippetManager
     @StateObject private var analyticsManager = AppDependencies.shared.analyticsManager
-    
-    @State private var showingOnboarding = false
+    @StateObject private var taskManager = AppDependencies.shared.taskManager
     
     var body: some Scene {
         // Menu Bar
@@ -41,6 +40,7 @@ struct FlowApp: App {
                 .environmentObject(dictionaryManager)
                 .environmentObject(inputFieldDetector)
                 .environmentObject(snippetManager)
+                .environmentObject(taskManager)
         } label: {
             menuBarLabel
         }
@@ -59,6 +59,7 @@ struct FlowApp: App {
                 .environmentObject(dictionaryManager)
                 .environmentObject(inputFieldDetector)
                 .environmentObject(snippetManager)
+                .environmentObject(taskManager)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -66,7 +67,7 @@ struct FlowApp: App {
         
         // Settings Window
         Settings {
-            SettingsView(analyticsManager: analyticsManager)
+            SettingsView()
                 .environmentObject(settingsStore)
                 .environmentObject(permissionsManager)
                 .environmentObject(modelManager)
@@ -77,6 +78,10 @@ struct FlowApp: App {
                 .environmentObject(dictionaryManager)
                 .environmentObject(inputFieldDetector)
                 .environmentObject(snippetManager)
+                .environmentObject(analyticsManager)
+                .environmentObject(taskManager)
+                .environmentObject(AppDependencies.shared.workspaceScanner)
+                .environmentObject(AppDependencies.shared.fileTagger)
         }
     }
     

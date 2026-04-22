@@ -10,14 +10,12 @@ import SwiftUI
 // MARK: - Settings Navigation
 
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case dashboard = "Dashboard"
     case general = "General"
     case hotkeys = "Hotkeys"
     case models = "Models"
     case injection = "Injection"
     case autoFocus = "Auto-Focus"
     case overlay = "Overlay"
-    case history = "History"
     case dictionary = "Dictionary"
     case snippets = "Snippets"
     case fileTagging = "File Tagging"
@@ -27,14 +25,12 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     
     var icon: String {
         switch self {
-        case .dashboard: return "chart.bar.fill"
         case .general: return "gear"
         case .hotkeys: return "keyboard"
         case .models: return "cpu"
         case .injection: return "text.cursor"
         case .autoFocus: return "target"
         case .overlay: return "rectangle.on.rectangle"
-        case .history: return "clock.arrow.circlepath"
         case .dictionary: return "book.closed"
         case .snippets: return "doc.text"
         case .fileTagging: return "at"
@@ -44,13 +40,11 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     
     var category: SettingsCategory {
         switch self {
-        case .dashboard:
-            return .overview
         case .general, .hotkeys, .models:
             return .general
         case .injection, .autoFocus, .overlay:
             return .behavior
-        case .history, .dictionary, .snippets, .fileTagging:
+        case .dictionary, .snippets, .fileTagging:
             return .content
         case .permissions:
             return .system
@@ -59,7 +53,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
 }
 
 enum SettingsCategory: String, CaseIterable {
-    case overview = "Overview"
     case general = "General"
     case behavior = "Behavior"
     case content = "Content"
@@ -73,9 +66,8 @@ enum SettingsCategory: String, CaseIterable {
 struct SettingsView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     @EnvironmentObject var permissionsManager: PermissionsManager
-    @ObservedObject var analyticsManager: AnalyticsManager
     
-    @State private var selectedSection: SettingsSection = .dashboard
+    @State private var selectedSection: SettingsSection = .general
     
     var body: some View {
         NavigationSplitView {
@@ -98,12 +90,10 @@ struct SettingsView: View {
                             .tag(section)
                     }
                 } header: {
-                    if category != .overview {
-                        Text(category.rawValue)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                    }
+                    Text(category.rawValue)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -116,7 +106,7 @@ struct SettingsView: View {
             Text(section.rawValue)
         } icon: {
             Image(systemName: section.icon)
-                .foregroundColor(section == .dashboard ? .accentColor : .secondary)
+                .foregroundColor(.secondary)
         }
     }
     
@@ -125,8 +115,6 @@ struct SettingsView: View {
     @ViewBuilder
     private var detailView: some View {
         switch selectedSection {
-        case .dashboard:
-            UsageDashboardView(analyticsManager: analyticsManager)
         case .general:
             GeneralSettingsView()
         case .hotkeys:
@@ -139,8 +127,6 @@ struct SettingsView: View {
             InputFieldSettingsView()
         case .overlay:
             OverlaySettingsView()
-        case .history:
-            HistorySettingsView()
         case .dictionary:
             DictionarySettingsView()
         case .snippets:
@@ -1166,7 +1152,7 @@ struct PermissionsSettingsView: View {
     let settingsStore = SettingsStore()
     let permissionsManager = PermissionsManager()
     let workspaceScanner = WorkspaceScanner()
-    SettingsView(analyticsManager: AnalyticsManager())
+    SettingsView()
         .environmentObject(settingsStore)
         .environmentObject(permissionsManager)
         .environmentObject(ModelManager())

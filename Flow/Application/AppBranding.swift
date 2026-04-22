@@ -12,6 +12,7 @@ enum AppBranding {
     nonisolated static let legacyDisplayName = "FlowPrompter"
     nonisolated static let bundleIdentifier = "quartzarts.Flow"
     nonisolated static let onboardingWindowTitle = "Welcome to Flow"
+    nonisolated static let dashboardWindowTitle = "Flow Dashboard"
     nonisolated static let settingsWindowTitle = "Flow Settings"
     nonisolated static let historyExportFileName = "Flow_History"
     nonisolated static let dictionaryExportFileName = "flow-dictionary.json"

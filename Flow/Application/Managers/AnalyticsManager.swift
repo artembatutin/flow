@@ -23,22 +23,30 @@ class AnalyticsManager: ObservableObject {
     
     // MARK: - File Management
     
-    private let fileManager = FileManager.default
+    private let fileManager: FileManager
+    private let customMetricsFileURL: URL?
     
     private var metricsFileURL: URL {
-        (try? AppSupportPaths.fileURL("usage_metrics.json", fileManager: fileManager)) ??
+        if let customMetricsFileURL {
+            return customMetricsFileURL
+        }
+        return (try? AppSupportPaths.fileURL("usage_metrics.json", fileManager: fileManager)) ??
             fileManager.temporaryDirectory.appendingPathComponent("usage_metrics.json")
     }
     
     // MARK: - Initialization
     
-    init() {
+    init(fileManager: FileManager = .default, metricsFileURL: URL? = nil) {
+        self.fileManager = fileManager
+        self.customMetricsFileURL = metricsFileURL
         loadMetrics()
     }
     
     // MARK: - Recording
     
     func recordSession(_ session: TranscriptionSession) {
+        guard session.captureKind == .dictation else { return }
+
         let timeSaved = calculateTimeSaved(wordCount: session.wordCount)
         
         metrics.recordSession(
@@ -184,6 +192,10 @@ class AnalyticsManager: ObservableObject {
     
     private func saveMetrics() {
         do {
+            try fileManager.createDirectory(
+                at: metricsFileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             let data = try encoder.encode(metrics)

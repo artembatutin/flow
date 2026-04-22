@@ -7,6 +7,22 @@
 
 import Foundation
 
+enum CaptureKind: String, Codable, CaseIterable, Identifiable {
+    case dictation
+    case task
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .dictation:
+            return "Dictation"
+        case .task:
+            return "Task"
+        }
+    }
+}
+
 struct TranscriptionSession: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     let timestamp: Date
@@ -14,6 +30,8 @@ struct TranscriptionSession: Identifiable, Codable, Equatable, Hashable {
     let targetApp: String?
     let duration: TimeInterval
     let modelUsed: String
+    let captureKind: CaptureKind
+    let linkedTaskID: UUID?
     let wordCount: Int
     let characterCount: Int
     
@@ -23,7 +41,9 @@ struct TranscriptionSession: Identifiable, Codable, Equatable, Hashable {
         transcription: String,
         targetApp: String? = nil,
         duration: TimeInterval,
-        modelUsed: String
+        modelUsed: String,
+        captureKind: CaptureKind = .dictation,
+        linkedTaskID: UUID? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -31,6 +51,8 @@ struct TranscriptionSession: Identifiable, Codable, Equatable, Hashable {
         self.targetApp = targetApp
         self.duration = duration
         self.modelUsed = modelUsed
+        self.captureKind = captureKind
+        self.linkedTaskID = linkedTaskID
         self.wordCount = transcription.split(separator: " ").count
         self.characterCount = transcription.count
     }
@@ -58,6 +80,33 @@ struct TranscriptionSession: Identifiable, Codable, Equatable, Hashable {
             return String(transcription.prefix(100)) + "..."
         }
         return transcription
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case timestamp
+        case transcription
+        case targetApp
+        case duration
+        case modelUsed
+        case captureKind
+        case linkedTaskID
+        case wordCount
+        case characterCount
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        timestamp = try container.decodeIfPresent(Date.self, forKey: .timestamp) ?? Date()
+        transcription = try container.decode(String.self, forKey: .transcription)
+        targetApp = try container.decodeIfPresent(String.self, forKey: .targetApp)
+        duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration) ?? 0
+        modelUsed = try container.decodeIfPresent(String.self, forKey: .modelUsed) ?? "Unknown"
+        captureKind = try container.decodeIfPresent(CaptureKind.self, forKey: .captureKind) ?? .dictation
+        linkedTaskID = try container.decodeIfPresent(UUID.self, forKey: .linkedTaskID)
+        wordCount = try container.decodeIfPresent(Int.self, forKey: .wordCount) ?? transcription.split(separator: " ").count
+        characterCount = try container.decodeIfPresent(Int.self, forKey: .characterCount) ?? transcription.count
     }
 }
 

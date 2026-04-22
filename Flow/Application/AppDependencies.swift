@@ -35,7 +35,10 @@ class AppDependencies {
     let snippetManager: SnippetManager
     let streamingTranscriber: StreamingTranscriber
     let analyticsManager: AnalyticsManager
+    let taskManager: TaskManager
+    let taskCaptureService: TaskCaptureService
     private var cancellables = Set<AnyCancellable>()
+    private let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     
     /// The target application to inject text into (captured when recording starts)
     private var targetApp: NSRunningApplication?
@@ -134,10 +137,16 @@ class AppDependencies {
         
         // Initialize analytics manager
         self.analyticsManager = AnalyticsManager()
+
+        // Initialize task system
+        self.taskManager = TaskManager()
+        self.taskCaptureService = TaskCaptureService(taskManager: taskManager)
         
         // Set initial model selection from settings
         modelManager.selectModel(byName: settingsStore.selectedModel)
         
+        guard !isRunningTests else { return }
+
         // Set up audio engine callbacks
         setupAudioEngineCallbacks()
         
@@ -293,72 +302,17 @@ class AppDependencies {
                 if settingsStore.dictionaryEnabled {
                     transcription = dictionaryManager.applyDictionary(to: transcription)
                 }
-                
-                // Apply syntax transformations if enabled
-                if settingsStore.syntaxTransformEnabled {
-                    // Sync settings with transformer
-                    syntaxTransformer.caseTransformationsEnabled = settingsStore.caseTransformationsEnabled
-                    syntaxTransformer.cliPatternsEnabled = settingsStore.cliPatternsEnabled
-                    syntaxTransformer.codeSymbolsEnabled = shouldEnableCodeSymbols(for: targetApp?.bundleIdentifier)
-                    transcription = syntaxTransformer.transform(transcription)
-                }
-                
-                // Apply file tagging if enabled and in an IDE
-                if settingsStore.fileTaggingEnabled {
-                    fileTagger.isEnabled = true
-                    transcription = fileTagger.processFileMentions(transcription)
-                }
-                
-                // Apply snippet expansion if enabled
-                if settingsStore.snippetsEnabled {
-                    let bundleId = targetApp?.bundleIdentifier
-                    transcription = snippetManager.processText(transcription, bundleId: bundleId)
-                }
-                
-                appState.updateTranscription(transcription)
-                
-                if settingsStore.autoInject && !transcription.isEmpty {
-                    // Restore focus to the target app before injection
-                    if let target = targetApp {
-                        textInjector.activateApp(target)
-                        // Brief delay to allow focus to switch
-                        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
-                    }
-                    
-                    // Auto-focus input field if enabled
-                    if inputFieldDetector.autoFocusEnabled {
-                        let focusSuccess = await inputFieldDetector.scanAndFocus()
-                        // Longer delay after focusing to ensure click registers
-                        try await Task.sleep(nanoseconds: focusSuccess ? 150_000_000 : 50_000_000) // 150ms if focused, 50ms otherwise
-                    }
-                    
-                    try await textInjectionService.inject(text: transcription)
-                    
-                    // Record injection for correction learning if enabled
-                    if settingsStore.autoLearnCorrections {
-                        correctionLearner.recordInjection(transcription)
-                    }
-                }
-                
-                // Save session to history and record analytics
-                if !transcription.isEmpty {
-                    let session = TranscriptionSession(
-                        transcription: transcription,
-                        targetApp: targetApp?.localizedName,
-                        duration: Date().timeIntervalSince(sessionManager.currentSessionStartTime ?? Date()),
-                        modelUsed: settingsStore.selectedModel
-                    )
-                    
-                    sessionManager.endSession(
-                        transcription: transcription,
-                        modelUsed: settingsStore.selectedModel
-                    )
-                    
-                    // Record to analytics
-                    analyticsManager.recordSession(session)
+
+                if taskCaptureService.isTaskCommand(transcription) {
+                    try await handleTaskCapture(transcription)
+                } else {
+                    try await handleDictationCapture(transcription)
                 }
             }
             
+            setIdleIfNotRecording()
+        } catch let error as TaskCaptureError {
+            appState.setError(error.localizedDescription)
             setIdleIfNotRecording()
         } catch {
             appState.setError("Transcription failed: \(error.localizedDescription)")
@@ -369,6 +323,79 @@ class AppDependencies {
     private func setIdleIfNotRecording() {
         guard !audioEngine.isRecording else { return }
         appState.setIdle()
+    }
+
+    private func handleTaskCapture(_ transcription: String) async throws {
+        let task = try taskCaptureService.createTask(from: transcription)
+        appState.updateTranscription(task.title)
+
+        sessionManager.endSession(
+            transcription: task.title,
+            modelUsed: settingsStore.selectedModel,
+            targetApp: targetApp?.localizedName,
+            captureKind: .task,
+            linkedTaskID: task.id
+        )
+    }
+
+    private func handleDictationCapture(_ transcription: String) async throws {
+        var finalText = transcription
+
+        if settingsStore.syntaxTransformEnabled {
+            syntaxTransformer.caseTransformationsEnabled = settingsStore.caseTransformationsEnabled
+            syntaxTransformer.cliPatternsEnabled = settingsStore.cliPatternsEnabled
+            syntaxTransformer.codeSymbolsEnabled = shouldEnableCodeSymbols(for: targetApp?.bundleIdentifier)
+            finalText = syntaxTransformer.transform(finalText)
+        }
+
+        if settingsStore.fileTaggingEnabled {
+            fileTagger.isEnabled = true
+            finalText = fileTagger.processFileMentions(finalText)
+        }
+
+        if settingsStore.snippetsEnabled {
+            let bundleId = targetApp?.bundleIdentifier
+            finalText = snippetManager.processText(finalText, bundleId: bundleId)
+        }
+
+        appState.updateTranscription(finalText)
+
+        if settingsStore.autoInject && !finalText.isEmpty {
+            if let target = targetApp {
+                textInjector.activateApp(target)
+                try await Task.sleep(nanoseconds: 100_000_000)
+            }
+
+            if inputFieldDetector.autoFocusEnabled {
+                let focusSuccess = await inputFieldDetector.scanAndFocus()
+                try await Task.sleep(nanoseconds: focusSuccess ? 150_000_000 : 50_000_000)
+            }
+
+            try await textInjectionService.inject(text: finalText)
+
+            if settingsStore.autoLearnCorrections {
+                correctionLearner.recordInjection(finalText)
+            }
+        }
+
+        guard !finalText.isEmpty else { return }
+
+        let session = TranscriptionSession(
+            transcription: finalText,
+            targetApp: targetApp?.localizedName,
+            duration: Date().timeIntervalSince(sessionManager.currentSessionStartTime ?? Date()),
+            modelUsed: settingsStore.selectedModel,
+            captureKind: .dictation
+        )
+
+        sessionManager.endSession(
+            transcription: finalText,
+            modelUsed: settingsStore.selectedModel,
+            targetApp: targetApp?.localizedName,
+            captureKind: .dictation
+        )
+
+        analyticsManager.recordSession(session)
     }
     
     func startHotkeyListening() {

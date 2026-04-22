@@ -71,7 +71,9 @@ class SessionManager: ObservableObject {
     func endSession(
         transcription: String,
         modelUsed: String,
-        targetApp: String? = nil
+        targetApp: String? = nil,
+        captureKind: CaptureKind = .dictation,
+        linkedTaskID: UUID? = nil
     ) {
         guard settingsStore.saveHistory else {
             currentSessionStartTime = nil
@@ -88,7 +90,9 @@ class SessionManager: ObservableObject {
             transcription: transcription,
             targetApp: app,
             duration: duration,
-            modelUsed: modelUsed
+            modelUsed: modelUsed,
+            captureKind: captureKind,
+            linkedTaskID: linkedTaskID
         )
         
         // Add to beginning of list

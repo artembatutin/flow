@@ -9,94 +9,151 @@ import SwiftUI
 
 struct AppBreakdownView: View {
     let apps: [UsageMetrics.AppMetric]
-    
+
+    private var totalWords: Int {
+        apps.reduce(0) { $0 + $1.words }
+    }
+
     private var totalSessions: Int {
         apps.reduce(0) { $0 + $1.sessions }
     }
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Top Apps")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            if apps.isEmpty {
-                emptyStateView
-            } else {
-                appListView
+        DashboardPanel(padding: 22) {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Top apps")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(DashboardPalette.textPrimary)
+
+                        Text(apps.isEmpty ? "Waiting for app-level data." : "\(totalSessions) sessions across \(apps.count) destinations.")
+                            .font(.subheadline)
+                            .foregroundStyle(DashboardPalette.textSecondary)
+                    }
+
+                    Spacer()
+                }
+
+                if apps.isEmpty {
+                    emptyStateView
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(apps) { app in
+                            appRow(app)
+                        }
+                    }
+                }
             }
         }
-        .padding(20)
-        .background {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
-        }
     }
-    
+
     private var emptyStateView: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             Image(systemName: "app.badge")
-                .font(.system(size: 28))
-                .foregroundColor(.secondary)
-            Text("No app data yet")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(DashboardPalette.accentBlue)
+
+            Text("No app breakdown yet")
+                .font(.headline)
+                .foregroundStyle(DashboardPalette.textPrimary)
+
+            Text("As dictation is used in different apps, this panel will show where voice work lands.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(DashboardPalette.textSecondary)
+                .frame(maxWidth: 360)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-    }
-    
-    private var appListView: some View {
-        VStack(spacing: 10) {
-            ForEach(apps) { app in
-                appRow(app)
-            }
+        .padding(.vertical, 36)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.black.opacity(0.18))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
+                )
         }
     }
-    
+
     private func appRow(_ app: UsageMetrics.AppMetric) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: appIcon(for: app.appName))
-                .font(.system(size: 16))
-                .foregroundColor(.accentColor)
-                .frame(width: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(app.appName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-                
-                Text("\(app.words) words")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+        let share = percentage(for: app)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(DashboardPalette.accentBlue.opacity(0.16))
+                        .frame(width: 46, height: 46)
+
+                    Image(systemName: appIcon(for: app.appName))
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(DashboardPalette.accentCyan)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(app.appName)
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(DashboardPalette.textPrimary)
+
+                    Text("\(app.words) words")
+                        .font(.subheadline)
+                        .foregroundStyle(DashboardPalette.textSecondary)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(app.sessions)")
+                        .font(.headline.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(DashboardPalette.textPrimary)
+
+                    Text("\(share)%")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(DashboardPalette.textSecondary)
+                }
             }
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(app.sessions)")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                
-                Text(percentage(for: app))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule(style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                        .frame(height: 8)
+
+                    Capsule(style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [DashboardPalette.accentBlue, DashboardPalette.accentCyan],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(18, proxy.size.width * CGFloat(share) / 100), height: 8)
+                }
             }
+            .frame(height: 8)
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.black.opacity(0.18))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
+                )
+        }
     }
-    
-    private func percentage(for app: UsageMetrics.AppMetric) -> String {
-        guard totalSessions > 0 else { return "0%" }
-        let percent = (Double(app.sessions) / Double(totalSessions)) * 100
-        return String(format: "%.0f%%", percent)
+
+    private func percentage(for app: UsageMetrics.AppMetric) -> Int {
+        guard totalWords > 0 else { return 0 }
+        let percent = (Double(app.words) / Double(totalWords)) * 100
+        return Int(percent.rounded())
     }
-    
+
     private func appIcon(for appName: String) -> String {
         let lowercased = appName.lowercased()
-        
+
         if lowercased.contains("cursor") || lowercased.contains("windsurf") || lowercased.contains("code") {
             return "chevron.left.forwardslash.chevron.right"
         } else if lowercased.contains("xcode") {
@@ -118,7 +175,7 @@ struct AppBreakdownView: View {
         } else if lowercased.contains("finder") {
             return "folder"
         }
-        
+
         return "app"
     }
 }
@@ -131,8 +188,9 @@ struct AppBreakdownView: View {
         UsageMetrics.AppMetric(bundleId: "com.apple.safari", appName: "Safari", sessions: 10, words: 300),
         UsageMetrics.AppMetric(bundleId: "com.apple.notes", appName: "Notes", sessions: 5, words: 150),
     ]
-    
+
     AppBreakdownView(apps: sampleApps)
-        .frame(width: 300)
         .padding()
+        .background(DashboardPalette.background)
+        .frame(width: 420)
 }

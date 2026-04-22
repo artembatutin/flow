@@ -24,7 +24,7 @@ class SettingsWindowController {
         }
         
         let dependencies = AppDependencies.shared
-        let settingsView = SettingsView(analyticsManager: dependencies.analyticsManager)
+        let settingsView = SettingsView()
             .environmentObject(dependencies.settingsStore)
             .environmentObject(dependencies.permissionsManager)
             .environmentObject(dependencies.modelManager)

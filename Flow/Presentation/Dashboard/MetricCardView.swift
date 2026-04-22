@@ -10,105 +10,103 @@ import SwiftUI
 struct MetricCardView: View {
     let title: String
     let value: String
-    let subtitle: String?
+    let subtitle: String
     let icon: String
+    let accent: Color
     let trend: AnalyticsManager.Trend?
-    
+
     init(
         title: String,
         value: String,
-        subtitle: String? = nil,
+        subtitle: String,
         icon: String,
+        accent: Color = DashboardPalette.accentBlue,
         trend: AnalyticsManager.Trend? = nil
     ) {
         self.title = title
         self.value = value
         self.subtitle = subtitle
         self.icon = icon
+        self.accent = accent
         self.trend = trend
     }
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.accentColor.opacity(0.18))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: icon)
-                        .foregroundColor(.accentColor)
-                        .font(.system(size: 16, weight: .semibold))
+        DashboardPanel(padding: 20, radius: 26) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top) {
+                    ZStack {
+                        Circle()
+                            .fill(accent.opacity(0.18))
+                            .frame(width: 46, height: 46)
+
+                        Image(systemName: icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(accent)
+                    }
+
+                    Spacer()
+
+                    if let trend {
+                        trendBadge(trend)
+                    }
                 }
-                
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            
-            Text(value)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            
-            HStack {
-                if let subtitle = subtitle {
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(title.uppercased())
+                        .font(.caption.weight(.bold))
+                        .tracking(1.2)
+                        .foregroundStyle(DashboardPalette.textMuted)
+
+                    Text(value)
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(DashboardPalette.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
                     Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-                
-                if let trend = trend {
-                    trendBadge(trend)
+                        .font(.subheadline)
+                        .foregroundStyle(DashboardPalette.textSecondary)
                 }
             }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
         }
     }
-    
+
     @ViewBuilder
     private func trendBadge(_ trend: AnalyticsManager.Trend) -> some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             switch trend {
             case .up:
                 Image(systemName: "arrow.up.right")
-                    .font(.caption2)
+                    .font(.caption2.weight(.bold))
             case .down:
                 Image(systemName: "arrow.down.right")
-                    .font(.caption2)
+                    .font(.caption2.weight(.bold))
             case .neutral:
-                EmptyView()
+                Image(systemName: "minus")
+                    .font(.caption2.weight(.bold))
             }
-            
+
             Text(trend.displayText)
-                .font(.caption2)
-                .fontWeight(.medium)
+                .font(.caption.weight(.bold))
+                .monospacedDigit()
         }
-        .foregroundColor(trendColor(trend))
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(trendColor(trend).opacity(0.15))
-        .cornerRadius(4)
+        .foregroundStyle(trendColor(trend))
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
+        .background(trendColor(trend).opacity(0.14))
+        .clipShape(Capsule(style: .continuous))
     }
-    
+
     private func trendColor(_ trend: AnalyticsManager.Trend) -> Color {
         switch trend {
         case .up:
-            return .green
+            return DashboardPalette.accentCyan
         case .down:
-            return .red
+            return DashboardPalette.accentRose
         case .neutral:
-            return .secondary
+            return DashboardPalette.textSecondary
         }
     }
 }
@@ -118,27 +116,31 @@ struct MetricCardView: View {
         MetricCardView(
             title: "Words",
             value: "1,234",
-            subtitle: "This week",
+            subtitle: "this week",
             icon: "text.word.spacing",
+            accent: DashboardPalette.accentBlue,
             trend: .up(percent: 12)
         )
-        
+
         MetricCardView(
             title: "Sessions",
             value: "45",
-            subtitle: "This week",
-            icon: "mic.fill",
+            subtitle: "dictation windows",
+            icon: "waveform.badge.mic",
+            accent: DashboardPalette.accentCyan,
             trend: .down(percent: 5)
         )
-        
+
         MetricCardView(
             title: "Time Saved",
             value: "2h 15m",
-            subtitle: "This week",
-            icon: "clock.fill",
+            subtitle: "typing avoided",
+            icon: "bolt.fill",
+            accent: DashboardPalette.accentAmber,
             trend: .neutral
         )
     }
     .padding()
-    .frame(width: 500)
+    .background(DashboardPalette.background)
+    .frame(width: 780)
 }
