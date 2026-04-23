@@ -12,16 +12,6 @@ struct UsageDashboardView: View {
     @State private var selectedPeriod: AnalyticsManager.Period = .week
     @State private var selectedChartMetric: UsageChartView.ChartMetric = .words
 
-    private struct MetricCardConfig: Identifiable {
-        let id = UUID()
-        let title: String
-        let value: String
-        let subtitle: String
-        let icon: String
-        let accent: Color
-        let trend: AnalyticsManager.Trend?
-    }
-
     private var totals: (sessions: Int, words: Int, timeSaved: TimeInterval) {
         analyticsManager.getTotals(for: selectedPeriod)
     }
@@ -48,311 +38,237 @@ struct UsageDashboardView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                heroSection
-                keyMetricsSection
+            VStack(alignment: .leading, spacing: DashboardMetrics.sectionSpacing) {
+                header
+                summaryStrip
 
-                HStack(alignment: .top, spacing: 20) {
-                    usageChartSection
-                        .frame(maxWidth: .infinity)
+                HStack(alignment: .top, spacing: DashboardMetrics.sectionSpacing) {
+                    activitySection
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
 
-                    insightsRail
-                        .frame(width: 280)
+                    VStack(spacing: DashboardMetrics.stackSpacing) {
+                        pulseSection
+                        throughputSection
+                        streaksSection
+                    }
+                    .frame(width: 248)
                 }
 
-                HStack(alignment: .top, spacing: 20) {
-                    appBreakdownSection
-                    streaksSection
-                }
+                AppBreakdownView(apps: analyticsManager.topApps)
             }
-            .padding(.bottom, 6)
+            .padding(.bottom, 8)
         }
         .scrollIndicators(.hidden)
         .background(Color.clear)
     }
 
-    private var heroSection: some View {
-        DashboardPanel {
-            VStack(alignment: .leading, spacing: 22) {
-                HStack(alignment: .top, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("VOICE OUTPUT")
-                            .font(.caption.weight(.bold))
-                            .tracking(2.2)
-                            .foregroundStyle(DashboardPalette.textMuted)
-
-                        Text("See the pace of dictation, not just the totals.")
-                            .font(.system(size: 32, weight: .bold, design: .serif))
-                            .foregroundStyle(DashboardPalette.textPrimary)
-
-                        Text("Track how output changes across the day, which apps absorb the most speech, and where the time savings compound.")
-                            .font(.title3)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                            .frame(maxWidth: 640, alignment: .leading)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    DashboardPillPicker(options: AnalyticsManager.Period.allCases, selection: $selectedPeriod) { period, _ in
-                        Text(period.rawValue)
-                            .font(.subheadline.weight(.semibold))
-                    }
-                }
-
-                HStack(spacing: 14) {
-                    DashboardMetricStrip(
-                        eyebrow: "Words",
-                        value: formatNumber(totals.words),
-                        caption: periodSubtitle,
-                        accent: DashboardPalette.accentBlue
-                    )
-
-                    DashboardMetricStrip(
-                        eyebrow: "Sessions",
-                        value: "\(totals.sessions)",
-                        caption: totals.sessions == 1 ? "single capture" : "captured sessions",
-                        accent: DashboardPalette.accentCyan
-                    )
-
-                    DashboardMetricStrip(
-                        eyebrow: "Time Saved",
-                        value: formatTimeSaved(totals.timeSaved),
-                        caption: "versus typing",
-                        accent: DashboardPalette.accentAmber
-                    )
-                }
+    private var header: some View {
+        DashboardSectionHeader(
+            title: "Dictation",
+            subtitle: "Track output, pacing, and where voice work lands."
+        ) {
+            DashboardPillPicker(options: AnalyticsManager.Period.allCases, selection: $selectedPeriod) { period, _ in
+                Text(period.rawValue)
+                    .font(.subheadline.weight(.medium))
             }
         }
     }
 
-    private var keyMetricsSection: some View {
-        let cardConfigs: [MetricCardConfig] = [
-            MetricCardConfig(
-                title: "Words Dictated",
+    private var summaryStrip: some View {
+        LazyVGrid(columns: summaryColumns, spacing: DashboardMetrics.stackSpacing) {
+            MetricCardView(
+                title: "Words",
                 value: formatNumber(totals.words),
                 subtitle: periodSubtitle,
                 icon: "text.word.spacing",
                 accent: DashboardPalette.accentBlue,
                 trend: selectedPeriod == .allTime ? nil : periodTrend
-            ),
-            MetricCardConfig(
+            )
+
+            MetricCardView(
                 title: "Sessions",
                 value: "\(totals.sessions)",
-                subtitle: "dictation windows",
+                subtitle: "captured",
                 icon: "waveform.badge.mic",
-                accent: DashboardPalette.accentCyan,
-                trend: nil
-            ),
-            MetricCardConfig(
-                title: "Time Saved",
+                accent: DashboardPalette.accentCyan
+            )
+
+            MetricCardView(
+                title: "Saved",
                 value: formatTimeSaved(totals.timeSaved),
-                subtitle: "typing time avoided",
-                icon: "bolt.fill",
-                accent: DashboardPalette.accentAmber,
-                trend: nil
-            ),
-            MetricCardConfig(
-                title: "Avg Words / Session",
+                subtitle: "typing avoided",
+                icon: "clock.arrow.circlepath",
+                accent: DashboardPalette.accentAmber
+            )
+
+            MetricCardView(
+                title: "Avg / Session",
                 value: "\(averageWordsPerSession)",
-                subtitle: "average density",
-                icon: "chart.bar.xaxis",
-                accent: DashboardPalette.accentRose,
-                trend: nil
-            )
-        ]
-
-        return LazyVGrid(columns: metricGridColumns, spacing: 16) {
-            ForEach(cardConfigs) { config in
-                MetricCardView(
-                    title: config.title,
-                    value: config.value,
-                    subtitle: config.subtitle,
-                    icon: config.icon,
-                    accent: config.accent,
-                    trend: config.trend
-                )
-            }
-        }
-    }
-
-    private var metricGridColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 220, maximum: 260), spacing: 16, alignment: .top)]
-    }
-
-    private var usageChartSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Activity curve")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textPrimary)
-                    Text("Switch metrics to compare raw output, cadence, and time returned.")
-                        .font(.subheadline)
-                        .foregroundStyle(DashboardPalette.textSecondary)
-                }
-
-                Spacer()
-
-                DashboardPillPicker(options: UsageChartView.ChartMetric.allCases, selection: $selectedChartMetric) { metric, _ in
-                    Text(metric.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                }
-            }
-
-            UsageChartView(
-                data: chartData,
-                metric: selectedChartMetric
+                subtitle: "words",
+                icon: "chart.bar",
+                accent: DashboardPalette.accentRose
             )
         }
     }
 
-    private var insightsRail: some View {
-        VStack(spacing: 16) {
-            DashboardPanel(padding: 20) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Pulse")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textPrimary)
+    private var summaryColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 168, maximum: 208), spacing: DashboardMetrics.stackSpacing, alignment: .top)]
+    }
 
-                    insightRow("Trend", value: periodTrend.displayText, accent: periodTrend.isPositive ? DashboardPalette.accentCyan : DashboardPalette.accentRose)
-                    insightRow("Peak day", value: peakDay?.displayDate ?? "No data", accent: DashboardPalette.accentBlue)
-                    insightRow("Top app", value: topApp?.appName ?? "Waiting", accent: DashboardPalette.accentAmber)
-                }
-            }
+    private var activitySection: some View {
+        DashboardSurface(padding: 14, radius: DashboardMetrics.surfaceRadius) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Activity")
+                            .font(.headline)
+                            .foregroundStyle(DashboardPalette.textPrimary)
 
-            DashboardPanel(padding: 20) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Throughput")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textPrimary)
+                        Text("Compare output, session count, or time returned.")
+                            .font(.caption)
+                            .foregroundStyle(DashboardPalette.textSecondary)
+                    }
 
-                    Text(formatNumber(totals.words))
-                        .font(.system(size: 38, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(DashboardPalette.textPrimary)
+                    Spacer(minLength: 10)
 
-                    Text("Total dictated during the selected window.")
-                        .font(.subheadline)
-                        .foregroundStyle(DashboardPalette.textSecondary)
+                    if let peakDay, metricValue(for: peakDay, metric: selectedChartMetric) > 0 {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Peak")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(DashboardPalette.textMuted)
 
-                    Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [DashboardPalette.accentBlue, DashboardPalette.accentCyan],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(height: 10)
-                        .overlay(alignment: .leading) {
-                            Capsule(style: .continuous)
-                                .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+                            Text("\(peakDay.displayDate) · \(metricValue(for: peakDay, metric: selectedChartMetric))")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(DashboardPalette.textPrimary)
+                                .monospacedDigit()
                         }
+                    }
+
+                    DashboardPillPicker(options: UsageChartView.ChartMetric.allCases, selection: $selectedChartMetric) { metric, _ in
+                        Text(metric.rawValue)
+                            .font(.caption2.weight(.medium))
+                    }
                 }
+
+                UsageChartView(data: chartData, metric: selectedChartMetric)
             }
         }
     }
 
-    private var appBreakdownSection: some View {
-        AppBreakdownView(apps: analyticsManager.topApps)
-            .frame(maxWidth: .infinity)
+    private var pulseSection: some View {
+        DashboardSurface(padding: 12, radius: DashboardMetrics.surfaceRadius, secondary: true) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Pulse")
+                    .font(.headline)
+                    .foregroundStyle(DashboardPalette.textPrimary)
+
+                insightRow("Trend", value: periodTrend.displayText, accent: periodTrend.isPositive ? DashboardPalette.accentGreen : DashboardPalette.destructive)
+                insightRow("Peak day", value: peakDay?.displayDate ?? "No data", accent: DashboardPalette.accentBlue)
+                insightRow("Top app", value: topApp?.appName ?? "Waiting", accent: DashboardPalette.accentAmber)
+            }
+        }
+    }
+
+    private var throughputSection: some View {
+        DashboardSurface(padding: 12, radius: DashboardMetrics.surfaceRadius, secondary: true) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Throughput")
+                    .font(.headline)
+                    .foregroundStyle(DashboardPalette.textPrimary)
+
+                Text(formatNumber(totals.words))
+                    .font(.system(size: 28, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(DashboardPalette.textPrimary)
+
+                Text("Total words dictated in the selected window.")
+                    .font(.caption)
+                    .foregroundStyle(DashboardPalette.textSecondary)
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule(style: .continuous)
+                            .fill(DashboardPalette.gridLine)
+
+                        Capsule(style: .continuous)
+                            .fill(DashboardPalette.accentBlue.opacity(0.60))
+                            .frame(width: max(16, proxy.size.width * throughputShare))
+                    }
+                }
+                .frame(height: 6)
+            }
+        }
+    }
+
+    private var throughputShare: CGFloat {
+        let total = max(analyticsManager.metrics.totalWords, 1)
+        return min(1, CGFloat(Double(totals.words) / Double(total)))
     }
 
     private var streaksSection: some View {
-        DashboardPanel(padding: 22) {
-            VStack(alignment: .leading, spacing: 18) {
+        DashboardSurface(padding: 12, radius: DashboardMetrics.surfaceRadius, secondary: true) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Streaks")
-                    .font(.title3.weight(.semibold))
+                    .font(.headline)
                     .foregroundStyle(DashboardPalette.textPrimary)
 
-                HStack(spacing: 14) {
-                    streakCard(
-                        title: "Current",
-                        value: analyticsManager.metrics.currentStreak,
-                        caption: "days in motion",
-                        icon: "flame.fill",
-                        accent: DashboardPalette.accentAmber
-                    )
-
-                    streakCard(
-                        title: "Best",
-                        value: analyticsManager.metrics.longestStreak,
-                        caption: "days record",
-                        icon: "trophy.fill",
-                        accent: DashboardPalette.accentCyan
-                    )
+                HStack(spacing: 10) {
+                    streakMetric(title: "Current", value: analyticsManager.metrics.currentStreak)
+                    streakMetric(title: "Best", value: analyticsManager.metrics.longestStreak)
                 }
 
-                if let lastActive = analyticsManager.metrics.lastActiveDate {
-                    Text("Last active \(formatLastActive(lastActive))")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(DashboardPalette.textSecondary)
-                } else {
-                    Text("No activity recorded yet.")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(DashboardPalette.textSecondary)
-                }
+                Text(lastActiveLabel)
+                    .font(.caption)
+                    .foregroundStyle(DashboardPalette.textSecondary)
             }
         }
-        .frame(maxWidth: .infinity)
     }
 
-    private func streakCard(
-        title: String,
-        value: Int,
-        caption: String,
-        icon: String,
-        accent: Color
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.18))
-                    .frame(width: 54, height: 54)
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(accent)
-            }
+    private var lastActiveLabel: String {
+        if let lastActive = analyticsManager.metrics.lastActiveDate {
+            return "Last active \(formatLastActive(lastActive))"
+        }
+        return "No activity recorded yet."
+    }
+
+    private func streakMetric(title: String, value: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DashboardPalette.textMuted)
 
             Text("\(value)")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
+                .font(.title3.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(DashboardPalette.textPrimary)
-
-            Text(title)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(DashboardPalette.textPrimary)
-
-            Text(caption)
-                .font(.subheadline)
-                .foregroundStyle(DashboardPalette.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.black.opacity(0.18))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(DashboardPalette.surface)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
                 )
         }
     }
 
     private func insightRow(_ title: String, value: String, accent: Color) -> some View {
-        HStack {
+        HStack(spacing: 10) {
             Circle()
                 .fill(accent)
-                .frame(width: 10, height: 10)
+                .frame(width: 8, height: 8)
 
             Text(title)
-                .font(.subheadline.weight(.medium))
+                .font(.caption)
                 .foregroundStyle(DashboardPalette.textSecondary)
 
-            Spacer()
+            Spacer(minLength: 8)
 
             Text(value)
-                .font(.subheadline.weight(.bold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(DashboardPalette.textPrimary)
                 .multilineTextAlignment(.trailing)
         }
@@ -398,7 +314,7 @@ struct UsageDashboardView: View {
         } else if minutes > 0 {
             return "\(minutes)m"
         } else {
-            return "< 1m"
+            return "<1m"
         }
     }
 

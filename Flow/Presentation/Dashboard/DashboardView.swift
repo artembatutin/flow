@@ -7,235 +7,23 @@
 
 import SwiftUI
 
-enum DashboardPalette {
-    static let background = Color(nsColor: NSColor(calibratedRed: 0.05, green: 0.06, blue: 0.08, alpha: 1))
-    static let backgroundSecondary = Color(nsColor: NSColor(calibratedRed: 0.08, green: 0.09, blue: 0.12, alpha: 1))
-    static let surfaceTop = Color(nsColor: NSColor(calibratedRed: 0.15, green: 0.16, blue: 0.20, alpha: 0.94))
-    static let surfaceBottom = Color(nsColor: NSColor(calibratedRed: 0.10, green: 0.11, blue: 0.14, alpha: 0.96))
-    static let surfaceRaised = Color(nsColor: NSColor(calibratedRed: 0.19, green: 0.20, blue: 0.24, alpha: 0.92))
-    static let outline = Color.white.opacity(0.09)
-    static let outlineSoft = Color.white.opacity(0.05)
-    static let textPrimary = Color.white.opacity(0.96)
-    static let textSecondary = Color.white.opacity(0.68)
-    static let textMuted = Color.white.opacity(0.5)
-    static let accentBlue = Color(nsColor: NSColor(calibratedRed: 0.22, green: 0.56, blue: 1.00, alpha: 1))
-    static let accentCyan = Color(nsColor: NSColor(calibratedRed: 0.23, green: 0.87, blue: 0.86, alpha: 1))
-    static let accentAmber = Color(nsColor: NSColor(calibratedRed: 0.98, green: 0.72, blue: 0.25, alpha: 1))
-    static let accentRose = Color(nsColor: NSColor(calibratedRed: 1.00, green: 0.45, blue: 0.57, alpha: 1))
-    static let accentViolet = Color(nsColor: NSColor(calibratedRed: 0.56, green: 0.46, blue: 1.00, alpha: 1))
-    static let shadow = Color.black.opacity(0.34)
-}
-
-struct DashboardSceneBackground: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [DashboardPalette.background, DashboardPalette.backgroundSecondary],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            Circle()
-                .fill(DashboardPalette.accentBlue.opacity(0.18))
-                .frame(width: 460, height: 460)
-                .blur(radius: 130)
-                .offset(x: 280, y: -220)
-
-            Circle()
-                .fill(DashboardPalette.accentAmber.opacity(0.14))
-                .frame(width: 340, height: 340)
-                .blur(radius: 120)
-                .offset(x: -260, y: -170)
-
-            Circle()
-                .fill(DashboardPalette.accentCyan.opacity(0.10))
-                .frame(width: 420, height: 420)
-                .blur(radius: 150)
-                .offset(x: -240, y: 250)
-
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.03), Color.clear, Color.white.opacity(0.02)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .blendMode(.screen)
-                .ignoresSafeArea()
-        }
-    }
-}
-
-struct DashboardPanel<Content: View>: View {
-    let padding: CGFloat
-    let radius: CGFloat
-    @ViewBuilder var content: Content
-
-    init(
-        padding: CGFloat = 24,
-        radius: CGFloat = 28,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.padding = padding
-        self.radius = radius
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(padding)
-            .background(panelShape)
-            .shadow(color: DashboardPalette.shadow, radius: 24, x: 0, y: 18)
-    }
-
-    private var panelShape: some View {
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [DashboardPalette.surfaceTop, DashboardPalette.surfaceBottom],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(DashboardPalette.outline, lineWidth: 1)
-            )
-            .overlay(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.05), lineWidth: 1)
-                    .blur(radius: 18)
-                    .mask(
-                        LinearGradient(
-                            colors: [Color.white, Color.clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
-    }
-}
-
-struct DashboardPillPicker<Selection: Hashable, Label: View>: View {
-    let options: [Selection]
-    @Binding var selection: Selection
-    let label: (Selection, Bool) -> Label
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(options, id: \.self) { option in
-                let isSelected = selection == option
-
-                Button {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                        selection = option
-                    }
-                } label: {
-                    label(option, isSelected)
-                        .foregroundStyle(isSelected ? DashboardPalette.textPrimary : DashboardPalette.textSecondary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .frame(minHeight: 40)
-                        .background {
-                            Capsule(style: .continuous)
-                                .fill(
-                                    isSelected
-                                        ? AnyShapeStyle(
-                                            LinearGradient(
-                                                colors: [DashboardPalette.accentBlue, DashboardPalette.accentCyan],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        : AnyShapeStyle(
-                                            LinearGradient(
-                                                colors: [Color.white.opacity(0.07), Color.white.opacity(0.03)],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                )
-                                .overlay(
-                                    Capsule(style: .continuous)
-                                        .strokeBorder(isSelected ? Color.white.opacity(0.12) : DashboardPalette.outlineSoft, lineWidth: 1)
-                                )
-                        }
-                        .scaleEffect(isSelected ? 1 : 0.98)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(6)
-        .background {
-            Capsule(style: .continuous)
-                .fill(Color.black.opacity(0.24))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                )
-        }
-    }
-}
-
-struct DashboardMetricStrip: View {
-    let eyebrow: String
-    let value: String
-    let caption: String
-    let accent: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(accent)
-                    .frame(width: 8, height: 8)
-                Text(eyebrow.uppercased())
-                    .font(.caption2.weight(.bold))
-                    .tracking(1.2)
-                    .foregroundStyle(DashboardPalette.textMuted)
-            }
-
-            Text(value)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(DashboardPalette.textPrimary)
-
-            Text(caption)
-                .font(.subheadline)
-                .foregroundStyle(DashboardPalette.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.black.opacity(0.18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                )
-        }
-    }
-}
-
-private enum DashboardMode: String, CaseIterable, Identifiable {
+enum DashboardSection: String, CaseIterable, Identifiable {
     case tasks = "Tasks"
     case dictation = "Dictation"
-
-    var id: String { rawValue }
-}
-
-private enum TaskSidebarSelection: Hashable {
-    case allTasks
-    case project(UUID)
-}
-
-private enum DictationMode: String, CaseIterable, Identifiable {
-    case overview = "Overview"
     case history = "History"
 
     var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .tasks:
+            return "checklist"
+        case .dictation:
+            return "waveform.badge.mic"
+        case .history:
+            return "clock.arrow.circlepath"
+        }
+    }
 }
 
 struct DashboardView: View {
@@ -244,14 +32,10 @@ struct DashboardView: View {
     @EnvironmentObject var textInjectionService: TextInjectionService
     @EnvironmentObject var analyticsManager: AnalyticsManager
 
-    @State private var mode: DashboardMode = .tasks
+    @State private var section: DashboardSection = .tasks
 
     private var openTasks: Int {
         taskManager.tasks.filter { $0.status != .done }.count
-    }
-
-    private var completedTasks: Int {
-        taskManager.tasks.filter { $0.status == .done }.count
     }
 
     private var weeklyTotals: (sessions: Int, words: Int, timeSaved: TimeInterval) {
@@ -259,103 +43,77 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        ZStack {
-            DashboardSceneBackground()
+        HStack(spacing: 0) {
+            sidebar
+                .frame(width: 228)
 
-            VStack(spacing: 24) {
-                header
+            Divider()
 
-                Group {
-                    switch mode {
-                    case .tasks:
-                        TasksWorkspaceView()
-                    case .dictation:
-                        DictationWorkspaceView()
-                    }
-                }
-            }
-            .padding(24)
+            mainContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(DashboardMetrics.contentPadding)
         }
+        .background(DashboardPalette.background)
         .frame(minWidth: 1120, minHeight: 760)
         .tint(DashboardPalette.accentBlue)
-        .preferredColorScheme(.dark)
     }
 
-    private var header: some View {
-        DashboardPanel(padding: 30, radius: 34) {
-            HStack(alignment: .top, spacing: 28) {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("FLOW WORKSPACE")
-                        .font(.caption.weight(.bold))
-                        .tracking(2.4)
-                        .foregroundStyle(DashboardPalette.textMuted)
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Flow Dashboard")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(DashboardPalette.textPrimary)
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Command the work, not the window chrome.")
-                            .font(.system(size: 38, weight: .bold, design: .serif))
-                            .foregroundStyle(DashboardPalette.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
+                Text("Workspace")
+                    .font(.caption)
+                    .foregroundStyle(DashboardPalette.textSecondary)
+            }
 
-                        Text("A single control room for captured tasks, dictation volume, and execution pace.")
-                            .font(.title3)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("WORKSPACE")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(DashboardPalette.textMuted)
 
-                    HStack(spacing: 14) {
-                        DashboardMetricStrip(
-                            eyebrow: "Open Tasks",
-                            value: "\(openTasks)",
-                            caption: completedTasks == 0 ? "Ready to route" : "\(completedTasks) completed",
-                            accent: DashboardPalette.accentAmber
-                        )
-
-                        DashboardMetricStrip(
-                            eyebrow: "Voice Sessions",
-                            value: "\(weeklyTotals.sessions)",
-                            caption: "This week",
-                            accent: DashboardPalette.accentCyan
-                        )
-
-                        DashboardMetricStrip(
-                            eyebrow: "Time Saved",
-                            value: formatTimeSaved(weeklyTotals.timeSaved),
-                            caption: "Recovered this week",
-                            accent: DashboardPalette.accentBlue
-                        )
-                    }
-                }
-
-                Spacer(minLength: 0)
-
-                VStack(alignment: .trailing, spacing: 18) {
-                    DashboardPillPicker(options: DashboardMode.allCases, selection: $mode) { option, _ in
-                        Text(option.rawValue)
-                            .font(.subheadline.weight(.semibold))
-                    }
-
-                    VStack(alignment: .trailing, spacing: 10) {
-                        Label("Live workspace sync", systemImage: "sparkles")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(DashboardPalette.textPrimary)
-
-                        Text(mode == .tasks ? "Task operations stay editable without leaving the dashboard." : "Analytics and transcription history sit in the same motion system.")
-                            .font(.subheadline)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                            .multilineTextAlignment(.trailing)
-                            .frame(maxWidth: 320, alignment: .trailing)
-                    }
-                    .padding(18)
-                    .background {
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(Color.black.opacity(0.22))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                    .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                            )
+                ForEach(DashboardSection.allCases) { item in
+                    DashboardSidebarRow(
+                        title: item.rawValue,
+                        icon: item.icon,
+                        selected: section == item
+                    ) {
+                        section = item
                     }
                 }
             }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("THIS WEEK")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(DashboardPalette.textMuted)
+
+                DashboardStatBadge(title: "Open", value: "\(openTasks)", accent: DashboardPalette.accentBlue)
+                DashboardStatBadge(title: "Sessions", value: "\(weeklyTotals.sessions)", accent: DashboardPalette.accentCyan)
+                DashboardStatBadge(title: "Saved", value: formatTimeSaved(weeklyTotals.timeSaved), accent: DashboardPalette.accentAmber)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(DashboardMetrics.sidebarPadding)
+        .background(DashboardPalette.sidebarBackground)
+    }
+
+    @ViewBuilder
+    private var mainContent: some View {
+        switch section {
+        case .tasks:
+            TasksWorkspaceView()
+                .environmentObject(taskManager)
+        case .dictation:
+            UsageDashboardView(analyticsManager: analyticsManager)
+        case .history:
+            HistoryView()
+                .environmentObject(sessionManager)
+                .environmentObject(textInjectionService)
         }
     }
 
@@ -377,21 +135,12 @@ struct DashboardView: View {
 private struct TasksWorkspaceView: View {
     @EnvironmentObject var taskManager: TaskManager
 
-    @State private var sidebarSelection: TaskSidebarSelection = .allTasks
+    @State private var selectedProjectID: UUID?
     @State private var showingNewTaskSheet = false
     @State private var showingTaxonomySheet = false
 
     private var filteredTasks: [TaskItem] {
         taskManager.filteredTasks()
-    }
-
-    private var selectedProject: TaskProject? {
-        switch sidebarSelection {
-        case .allTasks:
-            return nil
-        case .project(let id):
-            return taskManager.visibleProject(for: id)
-        }
     }
 
     private var filteredCompletedTasks: Int {
@@ -408,18 +157,13 @@ private struct TasksWorkspaceView: View {
 
     var body: some View {
         ScrollView {
-            HStack(alignment: .top, spacing: 24) {
-                sidebar
-                    .frame(width: 280)
-
-                VStack(spacing: 20) {
-                    taskHero
-                    filtersBar
-                    taskList
-                }
-                .frame(maxWidth: .infinity, alignment: .top)
+            VStack(alignment: .leading, spacing: DashboardMetrics.sectionSpacing) {
+                header
+                primaryControlBar
+                secondaryFilterBar
+                taskList
             }
-            .padding(.bottom, 6)
+            .padding(.bottom, 8)
         }
         .scrollIndicators(.hidden)
         .sheet(isPresented: $showingNewTaskSheet) {
@@ -433,203 +177,138 @@ private struct TasksWorkspaceView: View {
         .onAppear {
             syncSelection()
         }
-        .onChange(of: sidebarSelection) { _, _ in
+        .onChange(of: selectedProjectID) { _, _ in
             syncSelection()
         }
     }
 
-    private var sidebar: some View {
-        VStack(spacing: 20) {
-            DashboardPanel(padding: 22) {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("Task Map")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textPrimary)
+    private var header: some View {
+        DashboardSectionHeader(
+            title: "Tasks",
+            subtitle: "Review and route captured work."
+        ) {
+            HStack(spacing: 8) {
+                Button("Manage Taxonomy") {
+                    showingTaxonomySheet = true
+                }
+                .buttonStyle(.bordered)
 
-                    VStack(spacing: 10) {
-                        sidebarButton(
-                            title: "All Tasks",
-                            subtitle: "Everything captured so far",
-                            icon: "square.stack.3d.up.fill",
-                            count: taskManager.tasks.count,
-                            selected: sidebarSelection == .allTasks
-                        ) {
-                            sidebarSelection = .allTasks
-                        }
+                Button("New Task") {
+                    showingNewTaskSheet = true
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        }
+    }
 
+    private var primaryControlBar: some View {
+        DashboardToolbar {
+            HStack(alignment: .bottom, spacing: DashboardMetrics.controlGap) {
+                DashboardInlinePickerField(title: "Scope", width: 180) {
+                    Picker("Scope", selection: $selectedProjectID) {
+                        Text("All Tasks").tag(Optional<UUID>.none)
                         ForEach(taskManager.activeProjects) { project in
-                            sidebarButton(
-                                title: project.name,
-                                subtitle: projectTaskCount(project.id) == 0 ? "Quiet lane" : "\(projectTaskCount(project.id)) routed tasks",
-                                icon: "circle.grid.2x2.fill",
-                                count: projectTaskCount(project.id),
-                                selected: sidebarSelection == .project(project.id)
-                            ) {
-                                sidebarSelection = .project(project.id)
-                            }
-                        }
-
-                        if taskManager.activeProjects.isEmpty {
-                            Text("Create a project to give task capture a lane, then route work with one click.")
-                                .font(.subheadline)
-                                .foregroundStyle(DashboardPalette.textSecondary)
-                                .padding(14)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background {
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                        .fill(Color.black.opacity(0.18))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                                .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                                        )
-                                }
+                            Text(project.name).tag(Optional(project.id))
                         }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
                 }
-            }
 
-            DashboardPanel(padding: 20) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Signals")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textPrimary)
+                DashboardSearchField(
+                    title: "Search",
+                    placeholder: "Search titles, notes, projects, labels",
+                    text: searchBinding
+                )
+                .frame(maxWidth: .infinity)
 
-                    dashboardSignal(title: "Active", value: "\(taskManager.tasks.filter { $0.status != .done }.count)", accent: DashboardPalette.accentBlue)
-                    dashboardSignal(title: "Urgent + High", value: "\(taskManager.tasks.filter { $0.priority == .urgent || $0.priority == .high }.count)", accent: DashboardPalette.accentRose)
-                    dashboardSignal(title: "Voice Captured", value: "\(taskManager.tasks.filter { $0.source == .voiceTask }.count)", accent: DashboardPalette.accentAmber)
+                HStack(spacing: 8) {
+                    DashboardStatBadge(title: "Open", value: "\(filteredTasks.count)", accent: DashboardPalette.accentBlue)
+                        .frame(width: 84)
+                    DashboardStatBadge(title: "High", value: "\(filteredHighPriorityTasks)", accent: DashboardPalette.accentRose)
+                        .frame(width: 84)
+                    DashboardStatBadge(title: "Voice", value: "\(filteredVoiceTasks)", accent: DashboardPalette.accentAmber)
+                        .frame(width: 84)
+                    DashboardStatBadge(title: "Done", value: "\(filteredCompletedTasks)", accent: DashboardPalette.accentGreen)
+                        .frame(width: 84)
                 }
+                .frame(width: 360)
             }
         }
     }
 
-    private var taskHero: some View {
-        DashboardPanel {
-            VStack(alignment: .leading, spacing: 22) {
-                HStack(alignment: .top, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(selectedProject?.name ?? "All captured work")
-                            .font(.system(size: 30, weight: .bold, design: .serif))
-                            .foregroundStyle(DashboardPalette.textPrimary)
-
-                        Text(selectedProject == nil ? "Triage captured work, keep pressure on priority, and turn voice input into finished output." : "Focused lane for \(selectedProject!.name).")
-                            .font(.title3)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    HStack(spacing: 12) {
-                        Button("Manage Taxonomy") {
-                            showingTaxonomySheet = true
+    private var secondaryFilterBar: some View {
+        DashboardToolbar {
+            HStack(alignment: .bottom, spacing: DashboardMetrics.controlGap) {
+                DashboardInlinePickerField(title: "Status", width: 146) {
+                    Picker("Status", selection: statusFilterBinding) {
+                        Text("All Statuses").tag(Optional<TaskStatus>.none)
+                        ForEach(TaskStatus.allCases) { status in
+                            Text(status.displayName).tag(Optional(status))
                         }
-                        .buttonStyle(.bordered)
-
-                        Button("New Task") {
-                            showingNewTaskSheet = true
-                        }
-                        .buttonStyle(.borderedProminent)
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
                 }
 
-                HStack(spacing: 14) {
-                    heroStat(title: "Visible", value: "\(filteredTasks.count)", caption: "tasks in scope", accent: DashboardPalette.accentBlue)
-                    heroStat(title: "High Pressure", value: "\(filteredHighPriorityTasks)", caption: "high or urgent", accent: DashboardPalette.accentRose)
-                    heroStat(title: "Voice Flow", value: "\(filteredVoiceTasks)", caption: "voice-captured", accent: DashboardPalette.accentAmber)
-                    heroStat(title: "Done", value: "\(filteredCompletedTasks)", caption: "closed out", accent: DashboardPalette.accentCyan)
-                }
-            }
-        }
-    }
-
-    private var filtersBar: some View {
-        DashboardPanel(padding: 18) {
-            VStack(spacing: 16) {
-                HStack(alignment: .top, spacing: 12) {
-                    filterField("Label", width: 170) {
-                        Picker("Label", selection: labelFilterBinding) {
-                            Text("All Labels").tag(Optional<UUID>.none)
-                            ForEach(taskManager.activeLabels) { label in
-                                Text(label.name).tag(Optional(label.id))
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                    }
-
-                    filterField("Status", width: 170) {
-                        Picker("Status", selection: statusFilterBinding) {
-                            Text("All Statuses").tag(Optional<TaskStatus>.none)
-                            ForEach(TaskStatus.allCases) { status in
-                                Text(status.displayName).tag(Optional(status))
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                    }
-
-                    filterField("Priority", width: 170) {
-                        Picker("Priority", selection: priorityFilterBinding) {
-                            Text("All Priorities").tag(Optional<TaskPriority>.none)
-                            ForEach(TaskPriority.allCases) { priority in
-                                Text(priority.displayName).tag(Optional(priority))
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .labelsHidden()
-                    }
-
-                    filterField("Search", width: nil) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(DashboardPalette.textMuted)
-                            TextField("Search titles, notes, projects, labels", text: searchBinding)
-                                .textFieldStyle(.plain)
-                                .foregroundStyle(DashboardPalette.textPrimary)
+                DashboardInlinePickerField(title: "Priority", width: 146) {
+                    Picker("Priority", selection: priorityFilterBinding) {
+                        Text("All Priorities").tag(Optional<TaskPriority>.none)
+                        ForEach(TaskPriority.allCases) { priority in
+                            Text(priority.displayName).tag(Optional(priority))
                         }
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
                 }
 
-                HStack {
-                    Text(filtersActive ? "Filters active on \(filteredTasks.count) tasks" : "\(filteredTasks.count) tasks currently visible")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(DashboardPalette.textSecondary)
-
-                    Spacer()
-
-                    if filtersActive {
-                        Button("Reset Filters") {
-                            taskManager.filters = TaskFilterState(selectedProjectID: activeProjectID)
+                DashboardInlinePickerField(title: "Label", width: 160) {
+                    Picker("Label", selection: labelFilterBinding) {
+                        Text("All Labels").tag(Optional<UUID>.none)
+                        ForEach(taskManager.activeLabels) { label in
+                            Text(label.name).tag(Optional(label.id))
                         }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(DashboardPalette.accentCyan)
                     }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+
+                Spacer(minLength: 0)
+
+                if filtersActive {
+                    Button("Reset Filters") {
+                        taskManager.filters = TaskFilterState(selectedProjectID: selectedProjectID)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(DashboardPalette.accentBlue)
                 }
             }
         }
     }
 
     private var taskList: some View {
-        DashboardPanel(padding: 22) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    Text("Execution Queue")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textPrimary)
+        DashboardSurface(padding: 0, radius: DashboardMetrics.surfaceRadius) {
+            VStack(spacing: 0) {
+                taskTableHeader
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
 
-                    Spacer()
-
-                    Text(filteredTasks.isEmpty ? "Nothing in scope" : "\(filteredTasks.count) items")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(DashboardPalette.textSecondary)
-                }
+                Divider()
 
                 if filteredTasks.isEmpty {
                     emptyTasksView
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 44)
                 } else {
-                    LazyVStack(spacing: 16) {
+                    LazyVStack(spacing: 0) {
                         ForEach(filteredTasks) { task in
                             TaskTableRow(taskID: task.id)
                                 .environmentObject(taskManager)
+
+                            if task.id != filteredTasks.last?.id {
+                                Divider()
+                                    .padding(.leading, 12)
+                            }
                         }
                     }
                 }
@@ -637,38 +316,52 @@ private struct TasksWorkspaceView: View {
         }
     }
 
-    private var emptyTasksView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checklist.checked")
-                .font(.system(size: 38, weight: .semibold))
-                .foregroundStyle(DashboardPalette.accentCyan)
+    private var taskTableHeader: some View {
+        HStack(spacing: 12) {
+            Text("Title")
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("No tasks in this lane")
-                .font(.title2.weight(.bold))
+            Text("Status")
+                .frame(width: 104, alignment: .leading)
+
+            Text("Priority")
+                .frame(width: 104, alignment: .leading)
+
+            Text("Project")
+                .frame(width: 132, alignment: .leading)
+
+            Text("Labels")
+                .frame(width: 150, alignment: .leading)
+
+            Text("Updated")
+                .frame(width: 80, alignment: .leading)
+
+            Text("")
+                .frame(width: DashboardMetrics.minHitArea)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(DashboardPalette.textSecondary)
+    }
+
+    private var emptyTasksView: some View {
+        VStack(spacing: 10) {
+            Text("No tasks in scope")
+                .font(.headline)
                 .foregroundStyle(DashboardPalette.textPrimary)
 
             Text("Create a task manually or capture one with a voice command starting with \"task\".")
-                .font(.title3)
+                .font(.caption)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(DashboardPalette.textSecondary)
-                .frame(maxWidth: 460)
+                .frame(maxWidth: 420)
 
             Button("Create Task") {
                 showingNewTaskSheet = true
             }
             .buttonStyle(.borderedProminent)
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 54)
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.black.opacity(0.18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [6, 6]))
-                        .foregroundStyle(DashboardPalette.outline)
-                )
-        }
     }
 
     private var filtersActive: Bool {
@@ -677,15 +370,6 @@ private struct TasksWorkspaceView: View {
             filters.selectedStatus != nil ||
             filters.selectedPriority != nil ||
             !filters.searchText.isEmpty
-    }
-
-    private var activeProjectID: UUID? {
-        switch sidebarSelection {
-        case .allTasks:
-            return nil
-        case .project(let id):
-            return id
-        }
     }
 
     private var labelFilterBinding: Binding<UUID?> {
@@ -717,137 +401,7 @@ private struct TasksWorkspaceView: View {
     }
 
     private func syncSelection() {
-        taskManager.filters.selectedProjectID = activeProjectID
-    }
-
-    private func projectTaskCount(_ projectID: UUID) -> Int {
-        taskManager.tasks.filter { $0.projectID == projectID }.count
-    }
-
-    private func sidebarButton(
-        title: String,
-        subtitle: String,
-        icon: String,
-        count: Int,
-        selected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(selected ? DashboardPalette.accentBlue.opacity(0.20) : Color.white.opacity(0.05))
-                        .frame(width: 42, height: 42)
-
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(selected ? DashboardPalette.accentCyan : DashboardPalette.textSecondary)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textPrimary)
-
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(DashboardPalette.textSecondary)
-                }
-
-                Spacer()
-
-                Text("\(count)")
-                    .font(.caption.weight(.bold))
-                    .monospacedDigit()
-                    .foregroundStyle(selected ? DashboardPalette.textPrimary : DashboardPalette.textSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background {
-                        Capsule(style: .continuous)
-                            .fill(Color.black.opacity(selected ? 0.18 : 0.12))
-                    }
-            }
-            .padding(14)
-            .background {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        selected
-                            ? LinearGradient(
-                                colors: [
-                                    DashboardPalette.accentBlue.opacity(0.28),
-                                    DashboardPalette.surfaceRaised.opacity(0.92)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                            : LinearGradient(
-                                colors: [Color.white.opacity(0.06), Color.white.opacity(0.03)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .strokeBorder(selected ? Color.white.opacity(0.12) : DashboardPalette.outlineSoft, lineWidth: 1)
-                    )
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func dashboardSignal(title: String, value: String, accent: Color) -> some View {
-        HStack {
-            Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(DashboardPalette.textSecondary)
-
-            Spacer()
-
-            Text(value)
-                .font(.headline.weight(.bold))
-                .monospacedDigit()
-                .foregroundStyle(DashboardPalette.textPrimary)
-        }
-        .padding(14)
-        .background {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.black.opacity(0.18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(accent.opacity(0.20), lineWidth: 1)
-                )
-        }
-    }
-
-    private func heroStat(title: String, value: String, caption: String, accent: Color) -> some View {
-        DashboardMetricStrip(eyebrow: title, value: value, caption: caption, accent: accent)
-    }
-
-    private func filterField<Content: View>(
-        _ title: String,
-        width: CGFloat?,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.bold))
-                .tracking(1.1)
-                .foregroundStyle(DashboardPalette.textMuted)
-
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 11)
-                .background {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.black.opacity(0.18))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                        )
-                }
-        }
-        .frame(width: width)
+        taskManager.filters.selectedProjectID = selectedProjectID
     }
 }
 
@@ -855,117 +409,70 @@ private struct TaskTableRow: View {
     @EnvironmentObject var taskManager: TaskManager
 
     let taskID: UUID
+    @State private var showingLabelsPopover = false
 
     var body: some View {
         if let task = currentTask {
-            DashboardPanel(padding: 0, radius: 26) {
-                VStack(spacing: 0) {
-                    LinearGradient(
-                        colors: [task.status.tintColor.opacity(0.95), task.priority.tintColor.opacity(0.65)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(height: 4)
+            HStack(alignment: .top, spacing: 12) {
+                titleColumn(for: task)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
 
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack(alignment: .top, spacing: 16) {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack(spacing: 8) {
-                                    statusBadge(task.status)
-                                    priorityBadge(task.priority)
-                                    sourceBadge(task.source)
-                                }
-
-                                TextField("Task title", text: Binding(
-                                    get: { task.title },
-                                    set: { taskManager.updateTask(id: task.id, title: $0) }
-                                ))
-                                .textFieldStyle(.plain)
-                                .font(.title3.weight(.semibold))
-                                .foregroundStyle(DashboardPalette.textPrimary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 14)
-                                .background(fieldBackground)
-
-                                TextField("Add a note", text: Binding(
-                                    get: { task.notes ?? "" },
-                                    set: { taskManager.updateTask(id: task.id, notes: $0) }
-                                ), axis: .vertical)
-                                .lineLimit(2...4)
-                                .textFieldStyle(.plain)
-                                .foregroundStyle(DashboardPalette.textSecondary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
-                                .background(fieldBackground)
-                            }
-
-                            VStack(alignment: .trailing, spacing: 10) {
-                                Text(relativeDate(task.updatedAt))
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(DashboardPalette.textMuted)
-
-                                Button(role: .destructive) {
-                                    taskManager.deleteTask(task)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .frame(width: 38, height: 38)
-                                }
-                                .buttonStyle(.plain)
-                                .background {
-                                    Circle()
-                                        .fill(Color.red.opacity(0.16))
-                                }
-                                .foregroundStyle(Color.red.opacity(0.95))
-                            }
-                        }
-
-                        HStack(spacing: 12) {
-                            menuField("Status", width: 160) {
-                                Picker("", selection: Binding(
-                                    get: { task.status },
-                                    set: { taskManager.updateTask(id: task.id, status: $0) }
-                                )) {
-                                    ForEach(TaskStatus.allCases) { status in
-                                        Text(status.displayName).tag(status)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .labelsHidden()
-                            }
-
-                            menuField("Priority", width: 150) {
-                                Picker("", selection: Binding(
-                                    get: { task.priority },
-                                    set: { taskManager.updateTask(id: task.id, priority: $0) }
-                                )) {
-                                    ForEach(TaskPriority.allCases) { priority in
-                                        Text(priority.displayName).tag(priority)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .labelsHidden()
-                            }
-
-                            menuField("Project", width: 180) {
-                                Picker("", selection: Binding(
-                                    get: { task.projectID },
-                                    set: { taskManager.setTaskProject(id: task.id, projectID: $0) }
-                                )) {
-                                    Text("No Project").tag(Optional<UUID>.none)
-                                    ForEach(taskManager.activeProjects) { project in
-                                        Text(project.name).tag(Optional(project.id))
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .labelsHidden()
-                            }
-
-                            labelsField(for: task)
+                inlinePicker(width: 104) {
+                    Picker("", selection: Binding(
+                        get: { task.status },
+                        set: { taskManager.updateTask(id: task.id, status: $0) }
+                    )) {
+                        ForEach(TaskStatus.allCases) { status in
+                            Text(status.displayName).tag(status)
                         }
                     }
-                    .padding(22)
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+
+                inlinePicker(width: 104) {
+                    Picker("", selection: Binding(
+                        get: { task.priority },
+                        set: { taskManager.updateTask(id: task.id, priority: $0) }
+                    )) {
+                        ForEach(TaskPriority.allCases) { priority in
+                            Text(priority.displayName).tag(priority)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+
+                inlinePicker(width: 132) {
+                    Picker("", selection: Binding(
+                        get: { task.projectID },
+                        set: { taskManager.setTaskProject(id: task.id, projectID: $0) }
+                    )) {
+                        Text("No Project").tag(Optional<UUID>.none)
+                        ForEach(taskManager.activeProjects) { project in
+                            Text(project.name).tag(Optional(project.id))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                }
+
+                labelsColumn(for: task)
+                    .frame(width: 150, alignment: .leading)
+
+                Text(relativeDate(task.updatedAt))
+                    .font(.caption2)
+                    .foregroundStyle(DashboardPalette.textSecondary)
+                    .frame(width: 80, alignment: .leading)
+
+                DashboardIconActionButton(systemName: "trash", role: .destructive) {
+                    taskManager.deleteTask(task)
                 }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(minHeight: 72, alignment: .topLeading)
         }
     }
 
@@ -973,19 +480,96 @@ private struct TaskTableRow: View {
         taskManager.tasks.first(where: { $0.id == taskID })
     }
 
-    private var fieldBackground: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(Color.black.opacity(0.18))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
+    private func titleColumn(for task: TaskItem) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            TextField(
+                "Task title",
+                text: Binding(
+                    get: { task.title },
+                    set: { taskManager.updateTask(id: task.id, title: $0) }
+                ),
+                axis: .vertical
             )
+            .textFieldStyle(.plain)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(DashboardPalette.textPrimary)
+            .lineLimit(3)
+            .multilineTextAlignment(.leading)
+            .help(task.title)
+
+            HStack(spacing: 6) {
+                TextField(
+                    "Add note",
+                    text: Binding(
+                        get: { task.notes ?? "" },
+                        set: { taskManager.updateTask(id: task.id, notes: $0) }
+                    ),
+                    axis: .vertical
+                )
+                .textFieldStyle(.plain)
+                .font(.caption2)
+                .foregroundStyle(DashboardPalette.textSecondary)
+                .lineLimit(2)
+
+                if task.source == .voiceTask {
+                    DashboardMetaBadge(text: "Voice", tint: DashboardPalette.accentAmber, compact: true)
+                }
+            }
+        }
     }
 
-    private func relativeDate(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return "Updated \(formatter.localizedString(for: date, relativeTo: Date()))"
+    private func inlinePicker<Content: View>(width: CGFloat, @ViewBuilder content: () -> Content) -> some View {
+        DashboardControlSurface {
+            content()
+        }
+        .frame(width: width)
+    }
+
+    private func labelsColumn(for task: TaskItem) -> some View {
+        let labels = task.labelIDs.compactMap(taskManager.label(for:))
+        let visibleLabels = Array(labels.prefix(2))
+        let remainingCount = max(0, labels.count - visibleLabels.count)
+
+        return Button {
+            showingLabelsPopover = true
+        } label: {
+            DashboardControlSurface(padding: 10) {
+                HStack(spacing: 6) {
+                    if visibleLabels.isEmpty {
+                        Text("No labels")
+                            .font(.caption2)
+                            .foregroundStyle(DashboardPalette.textSecondary)
+                    } else {
+                        HStack(spacing: 4) {
+                            ForEach(visibleLabels) { label in
+                                DashboardMetaBadge(text: label.name, tint: label.colorToken.color, compact: true)
+                            }
+
+                            if remainingCount > 0 {
+                                DashboardMetaBadge(text: "+\(remainingCount)", tint: DashboardPalette.textSecondary, compact: true)
+                            }
+                        }
+                        .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(DashboardPalette.textMuted)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingLabelsPopover, arrowEdge: .top) {
+            TaskLabelSelectionPopover(
+                labels: taskManager.activeLabels,
+                selectedLabelIDs: task.labelIDs,
+                toggleLabel: { labelID in
+                    toggleLabel(labelID, on: task)
+                }
+            )
+        }
     }
 
     private func toggleLabel(_ labelID: UUID, on task: TaskItem) {
@@ -998,189 +582,66 @@ private struct TaskTableRow: View {
         taskManager.updateTask(id: task.id, labelIDs: labelIDs)
     }
 
-    private func menuField<Content: View>(
-        _ title: String,
-        width: CGFloat,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.bold))
-                .tracking(1)
-                .foregroundStyle(DashboardPalette.textMuted)
-
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(fieldBackground)
-        }
-        .frame(width: width, alignment: .leading)
-    }
-
-    private func labelsField(for task: TaskItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("LABELS")
-                .font(.caption2.weight(.bold))
-                .tracking(1)
-                .foregroundStyle(DashboardPalette.textMuted)
-
-            Menu {
-                ForEach(taskManager.activeLabels) { label in
-                    Button {
-                        toggleLabel(label.id, on: task)
-                    } label: {
-                        HStack {
-                            Image(systemName: task.labelIDs.contains(label.id) ? "checkmark.circle.fill" : "circle")
-                            Text(label.name)
-                        }
-                    }
-                }
-            } label: {
-                HStack(spacing: 8) {
-                    if task.labelIDs.compactMap(taskManager.label(for:)).isEmpty {
-                        Text("Add labels")
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                    } else {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                ForEach(task.labelIDs.compactMap(taskManager.label(for:)).prefix(4)) { label in
-                                    Text(label.name)
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 5)
-                                        .background(label.colorToken.color.opacity(0.18))
-                                        .foregroundStyle(label.colorToken.color)
-                                        .clipShape(Capsule(style: .continuous))
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(DashboardPalette.textMuted)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(fieldBackground)
-            }
-            .menuStyle(.borderlessButton)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func statusBadge(_ status: TaskStatus) -> some View {
-        badge(text: status.displayName, color: status.tintColor)
-    }
-
-    private func priorityBadge(_ priority: TaskPriority) -> some View {
-        badge(text: priority.displayName, color: priority.tintColor)
-    }
-
-    private func sourceBadge(_ source: TaskSource) -> some View {
-        badge(text: source == .voiceTask ? "Voice" : "Manual", color: source == .voiceTask ? DashboardPalette.accentAmber : DashboardPalette.accentBlue)
-    }
-
-    private func badge(text: String, color: Color) -> some View {
-        Text(text)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(color.opacity(0.16))
-            .clipShape(Capsule(style: .continuous))
+    private func relativeDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 }
 
-private struct DictationWorkspaceView: View {
-    @EnvironmentObject var analyticsManager: AnalyticsManager
-
-    @State private var mode: DictationMode = .overview
-
-    private var totals: (sessions: Int, words: Int, timeSaved: TimeInterval) {
-        analyticsManager.getTotals(for: .week)
-    }
+private struct TaskLabelSelectionPopover: View {
+    let labels: [TaskLabel]
+    let selectedLabelIDs: [UUID]
+    let toggleLabel: (UUID) -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            DashboardPanel {
-                HStack(alignment: .top, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Voice intelligence")
-                            .font(.system(size: 30, weight: .bold, design: .serif))
-                            .foregroundStyle(DashboardPalette.textPrimary)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Labels")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DashboardPalette.textSecondary)
 
-                        Text("Track output, pressure-test speaking habits, and revisit every captured session without leaving the workspace.")
-                            .font(.title3)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                    }
+            if labels.isEmpty {
+                Text("No labels available")
+                    .font(.caption)
+                    .foregroundStyle(DashboardPalette.textMuted)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(labels) { label in
+                            Button {
+                                toggleLabel(label.id)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: selectedLabelIDs.contains(label.id) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selectedLabelIDs.contains(label.id) ? DashboardPalette.accentBlue : DashboardPalette.textMuted)
 
-                    Spacer()
+                                    Circle()
+                                        .fill(label.colorToken.color)
+                                        .frame(width: 8, height: 8)
 
-                    VStack(alignment: .trailing, spacing: 14) {
-                        DashboardPillPicker(options: DictationMode.allCases, selection: $mode) { option, _ in
-                            Text(option.rawValue)
-                                .font(.subheadline.weight(.semibold))
-                        }
+                                    Text(label.name)
+                                        .font(.caption)
+                                        .foregroundStyle(DashboardPalette.textPrimary)
 
-                        HStack(spacing: 10) {
-                            compactSignal("Words", value: "\(totals.words)")
-                            compactSignal("Sessions", value: "\(totals.sessions)")
-                            compactSignal("Saved", value: formatTimeSaved(totals.timeSaved))
+                                    Spacer(minLength: 0)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background {
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(selectedLabelIDs.contains(label.id) ? DashboardPalette.surfaceTertiary.opacity(0.42) : Color.clear)
+                                }
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
-            }
-
-            Group {
-                switch mode {
-                case .overview:
-                    UsageDashboardView(analyticsManager: analyticsManager)
-                case .history:
-                    HistoryView()
-                }
+                .frame(maxHeight: 180)
             }
         }
-    }
-
-    private func compactSignal(_ title: String, value: String) -> some View {
-        VStack(alignment: .trailing, spacing: 4) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.bold))
-                .tracking(1)
-                .foregroundStyle(DashboardPalette.textMuted)
-            Text(value)
-                .font(.headline.weight(.bold))
-                .monospacedDigit()
-                .foregroundStyle(DashboardPalette.textPrimary)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.black.opacity(0.18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                )
-        }
-    }
-
-    private func formatTimeSaved(_ seconds: TimeInterval) -> String {
-        let totalMinutes = Int(seconds) / 60
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        if minutes > 0 {
-            return "\(minutes)m"
-        }
-        return "<1m"
+        .padding(12)
+        .frame(width: 220)
     }
 }
 
@@ -1201,13 +662,10 @@ private struct NewTaskSheet: View {
 
             DashboardPanel {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("New Task")
-                        .font(.system(size: 28, weight: .bold, design: .serif))
-                        .foregroundStyle(DashboardPalette.textPrimary)
-
-                    Text("Capture work with enough context to route it immediately.")
-                        .font(.title3)
-                        .foregroundStyle(DashboardPalette.textSecondary)
+                    DashboardSectionHeader(
+                        title: "New Task",
+                        subtitle: "Capture work with enough context to route it immediately."
+                    )
 
                     TextField("Task title", text: $title)
                         .textFieldStyle(.roundedBorder)
@@ -1216,7 +674,7 @@ private struct NewTaskSheet: View {
                         .lineLimit(3, reservesSpace: true)
                         .textFieldStyle(.roundedBorder)
 
-                    HStack {
+                    HStack(spacing: 12) {
                         Picker("Status", selection: $status) {
                             ForEach(TaskStatus.allCases) { status in
                                 Text(status.displayName).tag(status)
@@ -1270,6 +728,7 @@ private struct NewTaskSheet: View {
 
                     HStack {
                         Spacer()
+
                         Button("Cancel") {
                             dismiss()
                         }
@@ -1294,7 +753,6 @@ private struct NewTaskSheet: View {
             .padding(24)
         }
         .frame(width: 560, height: 520)
-        .preferredColorScheme(.dark)
     }
 }
 
@@ -1312,26 +770,17 @@ private struct TaskTaxonomySheet: View {
 
             DashboardPanel {
                 VStack(alignment: .leading, spacing: 18) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Projects & Labels")
-                                .font(.system(size: 28, weight: .bold, design: .serif))
-                                .foregroundStyle(DashboardPalette.textPrimary)
-
-                            Text("Shape the routing system behind task capture.")
-                                .font(.title3)
-                                .foregroundStyle(DashboardPalette.textSecondary)
-                        }
-
-                        Spacer()
-
+                    DashboardSectionHeader(
+                        title: "Projects & Labels",
+                        subtitle: "Shape the routing system behind task capture."
+                    ) {
                         Button("Done") {
                             dismiss()
                         }
                         .buttonStyle(.borderedProminent)
                     }
 
-                    HSplitView {
+                    HStack(alignment: .top, spacing: 16) {
                         projectsColumn
                         labelsColumn
                     }
@@ -1340,133 +789,131 @@ private struct TaskTaxonomySheet: View {
             .padding(24)
         }
         .frame(width: 820, height: 560)
-        .preferredColorScheme(.dark)
     }
 
     private var projectsColumn: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Projects")
-                .font(.headline)
-                .foregroundStyle(DashboardPalette.textPrimary)
+        DashboardSurface(padding: 14, radius: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Projects")
+                    .font(.headline)
+                    .foregroundStyle(DashboardPalette.textPrimary)
 
-            List {
-                ForEach(taskManager.activeProjects) { project in
-                    HStack {
-                        TextField("Project Name", text: Binding(
-                            get: { project.name },
-                            set: { updatedName in
-                                var updated = project
-                                updated.name = updatedName
-                                taskManager.updateProject(updated)
-                            }
-                        ))
+                HStack(spacing: 8) {
+                    TextField("New project", text: $newProjectName)
+                        .textFieldStyle(.roundedBorder)
 
-                        Button(role: .destructive) {
-                            taskManager.archiveProject(project)
-                        } label: {
-                            Image(systemName: "archivebox")
+                    Button("Add") {
+                        if taskManager.createProject(name: newProjectName) != nil {
+                            newProjectName = ""
                         }
-                        .buttonStyle(.borderless)
                     }
-                    .listRowBackground(Color.clear)
+                    .buttonStyle(.borderedProminent)
                 }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
 
-            HStack {
-                TextField("New project", text: $newProjectName)
-                    .textFieldStyle(.roundedBorder)
-                Button("Add") {
-                    _ = taskManager.createProject(name: newProjectName)
-                    newProjectName = ""
+                List {
+                    ForEach(taskManager.activeProjects) { project in
+                        HStack {
+                            TextField("Project Name", text: Binding(
+                                get: { project.name },
+                                set: { updatedName in
+                                    var updated = project
+                                    updated.name = updatedName
+                                    taskManager.updateProject(updated)
+                                }
+                            ))
+
+                            Spacer()
+
+                            Button("Archive") {
+                                taskManager.archiveProject(project)
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(DashboardPalette.destructive)
+                        }
+                    }
                 }
-                .buttonStyle(.borderedProminent)
+                .listStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var labelsColumn: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Labels")
-                .font(.headline)
-                .foregroundStyle(DashboardPalette.textPrimary)
+        DashboardSurface(padding: 14, radius: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Labels")
+                    .font(.headline)
+                    .foregroundStyle(DashboardPalette.textPrimary)
 
-            List {
-                ForEach(taskManager.activeLabels) { label in
-                    HStack {
-                        Circle()
-                            .fill(label.colorToken.color)
-                            .frame(width: 10, height: 10)
+                HStack(spacing: 8) {
+                    TextField("New label", text: $newLabelName)
+                        .textFieldStyle(.roundedBorder)
 
-                        TextField("Label Name", text: Binding(
-                            get: { label.name },
-                            set: { updatedName in
-                                var updated = label
-                                updated.name = updatedName
-                                taskManager.updateLabel(updated)
-                            }
-                        ))
-
-                        Picker("", selection: Binding(
-                            get: { label.colorToken },
-                            set: { newValue in
-                                var updated = label
-                                updated.colorToken = newValue
-                                taskManager.updateLabel(updated)
-                            }
-                        )) {
-                            ForEach(TaxonomyColorToken.allCases) { token in
-                                Text(token.displayName).tag(token)
-                            }
+                    Picker("Color", selection: $newLabelColor) {
+                        ForEach(TaxonomyColorToken.allCases) { color in
+                            Text(color.displayName).tag(color)
                         }
-                        .labelsHidden()
-                        .frame(width: 110)
-
-                        Button(role: .destructive) {
-                            taskManager.archiveLabel(label)
-                        } label: {
-                            Image(systemName: "archivebox")
-                        }
-                        .buttonStyle(.borderless)
                     }
-                    .listRowBackground(Color.clear)
+                    .frame(width: 110)
+
+                    Button("Add") {
+                        if taskManager.createLabel(name: newLabelName, colorToken: newLabelColor) != nil {
+                            newLabelName = ""
+                            newLabelColor = .blue
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-            }
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
 
-            HStack {
-                TextField("New label", text: $newLabelName)
-                    .textFieldStyle(.roundedBorder)
+                List {
+                    ForEach(taskManager.activeLabels) { label in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(label.colorToken.color)
+                                .frame(width: 10, height: 10)
 
-                Picker("", selection: $newLabelColor) {
-                    ForEach(TaxonomyColorToken.allCases) { token in
-                        Text(token.displayName).tag(token)
+                            TextField("Label Name", text: Binding(
+                                get: { label.name },
+                                set: { updatedName in
+                                    var updated = label
+                                    updated.name = updatedName
+                                    taskManager.updateLabel(updated)
+                                }
+                            ))
+
+                            Spacer()
+
+                            Button("Archive") {
+                                taskManager.archiveLabel(label)
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(DashboardPalette.destructive)
+                        }
                     }
                 }
-                .labelsHidden()
-                .frame(width: 110)
-
-                Button("Add") {
-                    _ = taskManager.createLabel(name: newLabelName, colorToken: newLabelColor)
-                    newLabelName = ""
-                    newLabelColor = .blue
-                }
-                .buttonStyle(.borderedProminent)
+                .listStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 }
 
 #Preview {
+    let taskManager = TaskManager()
+    let settingsStore = SettingsStore()
+    let permissionsManager = PermissionsManager()
+
     DashboardView()
-        .environmentObject(TaskManager())
-        .environmentObject(SessionManager(settingsStore: SettingsStore()))
-        .environmentObject(TextInjectionService(
-            textInjector: TextInjector(),
-            settingsStore: SettingsStore(),
-            permissionsManager: PermissionsManager()
-        ))
+        .environmentObject(taskManager)
+        .environmentObject(SessionManager(settingsStore: settingsStore))
+        .environmentObject(
+            TextInjectionService(
+                textInjector: TextInjector(),
+                settingsStore: settingsStore,
+                permissionsManager: permissionsManager,
+                adapterRegistry: AdapterRegistry(),
+                inputFieldDetector: InputFieldDetector()
+            )
+        )
         .environmentObject(AnalyticsManager())
 }

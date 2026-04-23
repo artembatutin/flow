@@ -50,66 +50,31 @@ struct UsageChartView: View {
     }
 
     var body: some View {
-        DashboardPanel(padding: 22) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Daily activity")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(DashboardPalette.textPrimary)
-
-                        Text(hasData ? "Average \(formattedValue(averageValue)) per active day" : "Waiting for your first meaningful dictation burst")
-                            .font(.subheadline)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                    }
-
-                    Spacer()
-
-                    if let peakPoint, peakPoint.value > 0 {
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("Peak")
-                                .font(.caption.weight(.bold))
-                                .tracking(1)
-                                .foregroundStyle(DashboardPalette.textMuted)
-                            Text("\(peakPoint.metric.displayDate) · \(formattedValue(peakPoint.value))")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(DashboardPalette.textPrimary)
-                        }
-                    }
-                }
-
-                if hasData {
-                    chartView
-                } else {
-                    emptyStateView
-                }
+        Group {
+            if hasData {
+                chartView
+            } else {
+                emptyStateView
             }
         }
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "waveform.path.ecg")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(metric.accent)
+        DashboardControlSurface(height: 268, padding: 20, radius: 14) {
+            VStack(spacing: 10) {
+                Image(systemName: "waveform.path")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(metric.accent)
 
-            Text("No chart data yet")
-                .font(.headline)
-                .foregroundStyle(DashboardPalette.textPrimary)
+                Text("No chart data yet")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DashboardPalette.textPrimary)
 
-            Text("Start dictating to see \(metric.rawValue.lowercased()) show up here.")
-                .font(.subheadline)
-                .foregroundStyle(DashboardPalette.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 260)
-        .background {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.black.opacity(0.18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                )
+                Text("Start dictating to see \(metric.rawValue.lowercased()) here.")
+                    .font(.caption)
+                    .foregroundStyle(DashboardPalette.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -120,13 +85,7 @@ struct UsageChartView: View {
                     x: .value("Date", point.metric.displayDate),
                     y: .value(metric.rawValue, point.value)
                 )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [metric.accent.opacity(0.35), metric.accent.opacity(0.02)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
+                .foregroundStyle(metric.accent.opacity(0.10))
                 .interpolationMethod(.catmullRom)
 
                 LineMark(
@@ -134,7 +93,7 @@ struct UsageChartView: View {
                     y: .value(metric.rawValue, point.value)
                 )
                 .foregroundStyle(metric.accent)
-                .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                 .interpolationMethod(.catmullRom)
 
                 PointMark(
@@ -142,52 +101,61 @@ struct UsageChartView: View {
                     y: .value(metric.rawValue, point.value)
                 )
                 .foregroundStyle(metric.accent)
-                .symbolSize(point.value == peakPoint?.value ? 72 : 28)
+                .symbolSize(point.value == peakPoint?.value ? 42 : 18)
             }
 
             if averageValue > 0 {
                 RuleMark(y: .value("Average", averageValue))
                     .foregroundStyle(DashboardPalette.textMuted)
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 4]))
                     .annotation(position: .topTrailing, alignment: .trailing) {
                         Text("Avg \(formattedValue(averageValue))")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(DashboardPalette.textMuted)
+                            .font(.caption2)
+                            .foregroundStyle(DashboardPalette.textSecondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(DashboardPalette.surfaceSecondary)
+                            .clipShape(Capsule(style: .continuous))
                     }
             }
         }
         .chartXAxis {
-            AxisMarks(values: .automatic) { value in
+            AxisMarks(values: .automatic(desiredCount: 6)) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0))
                 AxisTick(stroke: StrokeStyle(lineWidth: 0))
                 AxisValueLabel {
                     if let dateStr = value.as(String.self) {
                         Text(dateStr)
-                            .font(.caption2.weight(.medium))
+                            .font(.caption2)
                             .foregroundStyle(DashboardPalette.textMuted)
                     }
                 }
             }
         }
         .chartYAxis {
-            AxisMarks(position: .leading) { value in
+            AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 1))
-                    .foregroundStyle(Color.white.opacity(0.08))
+                    .foregroundStyle(DashboardPalette.gridLine)
                 AxisTick(stroke: StrokeStyle(lineWidth: 0))
                 AxisValueLabel {
                     if let doubleValue = value.as(Double.self) {
                         Text(formattedAxisValue(doubleValue))
-                            .font(.caption2.weight(.medium))
+                            .font(.caption2)
                             .foregroundStyle(DashboardPalette.textMuted)
                     } else if let intValue = value.as(Int.self) {
                         Text(formattedAxisValue(Double(intValue)))
-                            .font(.caption2.weight(.medium))
+                            .font(.caption2)
                             .foregroundStyle(DashboardPalette.textMuted)
                     }
                 }
             }
         }
-        .frame(height: 280)
+        .chartPlotStyle { plotContent in
+            plotContent
+                .padding(.top, 4)
+                .padding(.trailing, 4)
+        }
+        .frame(height: 272)
     }
 
     private func value(for metric: UsageMetrics.DailyMetric) -> Double {
@@ -240,8 +208,10 @@ struct UsageChartView: View {
         UsageMetrics.DailyMetric(dateString: "2026-01-27", sessions: 4, words: 180),
     ]
 
-    UsageChartView(data: sampleData, metric: .words)
-        .padding()
-        .background(DashboardPalette.background)
-        .frame(width: 780)
+    DashboardSurface {
+        UsageChartView(data: sampleData, metric: .words)
+    }
+    .padding()
+    .background(DashboardPalette.background)
+    .frame(width: 780)
 }

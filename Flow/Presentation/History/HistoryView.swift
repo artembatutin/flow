@@ -17,8 +17,9 @@ struct HistoryView: View {
     @State private var selectedCaptureKind: CaptureKind?
 
     var body: some View {
-        VStack(spacing: 20) {
-            controls
+        VStack(spacing: DashboardMetrics.sectionSpacing) {
+            header
+            toolbar
 
             if displayedSessions.isEmpty {
                 emptyStateView
@@ -39,123 +40,77 @@ struct HistoryView: View {
         }
     }
 
-    private var controls: some View {
-        DashboardPanel {
-            VStack(spacing: 16) {
-                HStack(alignment: .top, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Session history")
-                            .font(.system(size: 28, weight: .bold, design: .serif))
-                            .foregroundStyle(DashboardPalette.textPrimary)
-
-                        Text("Inspect raw captures, search for phrases, and move useful text back into the active app.")
-                            .font(.title3)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                    }
-
-                    Spacer()
-
-                    HStack(spacing: 10) {
-                        Button("Export") {
-                            showExportSheet = true
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(sessionManager.sessions.isEmpty)
-
-                        Button("Clear") {
-                            showClearConfirmation = true
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(sessionManager.sessions.isEmpty)
-                    }
+    private var header: some View {
+        DashboardSectionHeader(
+            title: "History",
+            subtitle: "Inspect captures and move useful text back into the active app."
+        ) {
+            HStack(spacing: 8) {
+                Button("Export") {
+                    showExportSheet = true
                 }
+                .buttonStyle(.bordered)
+                .disabled(sessionManager.sessions.isEmpty)
 
-                HStack(spacing: 12) {
-                    DashboardPillPicker(
-                        options: [Optional<CaptureKind>.none] + CaptureKind.allCases.map(Optional.some),
-                        selection: $selectedCaptureKind
-                    ) { kind, _ in
-                        Text(kind?.displayName ?? "All Captures")
-                            .font(.subheadline.weight(.semibold))
-                    }
-
-                    searchField
-                        .frame(maxWidth: .infinity)
-
-                    Text("\(displayedSessions.count) sessions")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(DashboardPalette.textSecondary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.black.opacity(0.18))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                                )
-                        }
+                Button("Clear") {
+                    showClearConfirmation = true
                 }
+                .buttonStyle(.bordered)
+                .disabled(sessionManager.sessions.isEmpty)
             }
         }
     }
 
-    private var searchField: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(DashboardPalette.textMuted)
-
-            TextField("Search transcriptions", text: $sessionManager.searchQuery)
-                .textFieldStyle(.plain)
-                .foregroundStyle(DashboardPalette.textPrimary)
-
-            if !sessionManager.searchQuery.isEmpty {
-                Button {
-                    sessionManager.searchQuery = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(DashboardPalette.textMuted)
+    private var toolbar: some View {
+        DashboardToolbar {
+            HStack(spacing: DashboardMetrics.controlGap) {
+                DashboardPillPicker(
+                    options: [Optional<CaptureKind>.none] + CaptureKind.allCases.map(Optional.some),
+                    selection: $selectedCaptureKind
+                ) { kind, _ in
+                    Text(kind?.displayName ?? "All")
+                        .font(.caption.weight(.medium))
                 }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
+                .frame(width: 230, alignment: .leading)
+
+                DashboardSearchField(
+                    placeholder: "Search transcriptions",
+                    text: $sessionManager.searchQuery
                 )
+                .frame(maxWidth: .infinity)
+
+                DashboardStatBadge(
+                    title: "Sessions",
+                    value: "\(displayedSessions.count)",
+                    accent: DashboardPalette.accentBlue
+                )
+                .frame(width: 108)
+            }
         }
     }
 
     private var emptyStateView: some View {
-        DashboardPanel {
-            VStack(spacing: 14) {
+        DashboardSurface(padding: 24, radius: DashboardMetrics.surfaceRadius) {
+            VStack(spacing: 10) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 44, weight: .semibold))
-                    .foregroundStyle(DashboardPalette.accentCyan)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(DashboardPalette.textSecondary)
 
                 Text(sessionManager.searchQuery.isEmpty ? "No transcription history yet" : "No sessions match your search")
-                    .font(.title2.weight(.bold))
+                    .font(.headline)
                     .foregroundStyle(DashboardPalette.textPrimary)
 
-                Text(sessionManager.searchQuery.isEmpty ? "Your captured voice sessions will appear here once dictation starts." : "Try a broader phrase or switch the capture filter.")
-                    .font(.title3)
-                    .multilineTextAlignment(.center)
+                Text(sessionManager.searchQuery.isEmpty ? "Captured sessions will appear here once dictation starts." : "Try a broader phrase or switch the capture filter.")
+                    .font(.caption)
                     .foregroundStyle(DashboardPalette.textSecondary)
-                    .frame(maxWidth: 460)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 70)
         }
     }
 
     private var sessionStream: some View {
         ScrollView {
-            LazyVStack(spacing: 14) {
+            LazyVStack(spacing: 10) {
                 ForEach(displayedSessions) { session in
                     SessionRowView(
                         session: session,
@@ -173,7 +128,7 @@ struct HistoryView: View {
                     )
                 }
             }
-            .padding(2)
+            .padding(.bottom, 8)
         }
         .scrollIndicators(.hidden)
     }
@@ -195,46 +150,49 @@ struct SessionRowView: View {
     @State private var isExpanded = false
 
     var body: some View {
-        DashboardPanel(padding: 20, radius: 24) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
+        DashboardSurface(padding: 12, radius: DashboardMetrics.surfaceRadius, secondary: true) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(session.formattedTimestamp)
-                            .font(.caption.weight(.semibold))
+                            .font(.caption)
                             .foregroundStyle(DashboardPalette.textMuted)
 
-                        HStack(spacing: 8) {
-                            badge(
+                        HStack(spacing: 5) {
+                            DashboardMetaBadge(
                                 text: session.captureKind.displayName,
-                                color: session.captureKind == .task ? DashboardPalette.accentAmber : DashboardPalette.accentBlue
+                                tint: session.captureKind == .task ? DashboardPalette.accentAmber : DashboardPalette.accentBlue,
+                                compact: true
                             )
-                            badge(text: session.formattedDuration, color: DashboardPalette.accentCyan)
-                            badge(text: "\(session.wordCount) words", color: DashboardPalette.accentRose)
+                            DashboardMetaBadge(text: session.formattedDuration, tint: DashboardPalette.accentCyan, compact: true)
+                            DashboardMetaBadge(text: "\(session.wordCount) words", tint: DashboardPalette.accentRose, compact: true)
 
                             if let app = session.targetApp {
-                                badge(text: app, color: DashboardPalette.textSecondary)
+                                DashboardMetaBadge(text: app, tint: DashboardPalette.textSecondary, compact: true)
                             }
                         }
                     }
 
-                    Spacer()
+                    Spacer(minLength: 16)
 
                     HStack(spacing: 6) {
-                        actionButton(systemName: "doc.on.doc", action: onCopy)
+                        DashboardIconActionButton(systemName: "doc.on.doc", action: onCopy)
 
                         if session.captureKind == .dictation {
-                            actionButton(systemName: "text.cursor", action: onReinject)
+                            DashboardIconActionButton(systemName: "text.cursor", action: onReinject)
                         }
 
-                        actionButton(systemName: "trash", role: .destructive, action: onDelete)
+                        DashboardIconActionButton(systemName: "trash", role: .destructive, action: onDelete)
                     }
-                    .opacity(isHovering ? 1 : 0.72)
+                    .opacity(isHovering ? 1 : 0.82)
                 }
 
                 Text(isExpanded ? session.transcription : session.truncatedTranscription)
                     .font(.body)
                     .foregroundStyle(DashboardPalette.textPrimary)
+                    .lineSpacing(3)
                     .lineLimit(isExpanded ? nil : 4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack {
                     if session.transcription.count > 100 {
@@ -243,13 +201,14 @@ struct SessionRowView: View {
                                 isExpanded.toggle()
                             }
                         }
-                        .buttonStyle(.borderless)
-                        .foregroundStyle(DashboardPalette.accentCyan)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(DashboardPalette.accentBlue)
+                        .font(.caption.weight(.medium))
                     }
 
                     Spacer()
 
-                    badge(text: session.modelUsed, color: DashboardPalette.accentBlue)
+                    DashboardMetaBadge(text: session.modelUsed, tint: DashboardPalette.textSecondary, compact: true)
                 }
             }
         }
@@ -257,33 +216,6 @@ struct SessionRowView: View {
         .onHover { hovering in
             isHovering = hovering
         }
-    }
-
-    private func badge(text: String, color: Color) -> some View {
-        Text(text)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(color.opacity(0.14))
-            .clipShape(Capsule(style: .continuous))
-    }
-
-    private func actionButton(
-        systemName: String,
-        role: ButtonRole? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(role: role, action: action) {
-            Image(systemName: systemName)
-                .frame(width: 34, height: 34)
-        }
-        .buttonStyle(.plain)
-        .background {
-            Circle()
-                .fill(role == .destructive ? Color.red.opacity(0.16) : Color.white.opacity(0.08))
-        }
-        .foregroundStyle(role == .destructive ? Color.red.opacity(0.95) : DashboardPalette.textPrimary)
     }
 }
 
@@ -305,7 +237,7 @@ struct ExportHistoryView: View {
             DashboardPanel {
                 VStack(spacing: 20) {
                     Text("Export History")
-                        .font(.title2.weight(.bold))
+                        .font(.title3.weight(.semibold))
                         .foregroundStyle(DashboardPalette.textPrimary)
 
                     Picker("Format", selection: $exportFormat) {
@@ -332,7 +264,6 @@ struct ExportHistoryView: View {
             .padding(24)
         }
         .frame(width: 360, height: 240)
-        .preferredColorScheme(.dark)
     }
 
     private func exportHistory() {
@@ -428,10 +359,4 @@ struct StatRow: View {
 
 #Preview {
     HistoryView()
-        .environmentObject(SessionManager(settingsStore: SettingsStore()))
-        .environmentObject(TextInjectionService(
-            textInjector: TextInjector(),
-            settingsStore: SettingsStore(),
-            permissionsManager: PermissionsManager()
-        ))
 }

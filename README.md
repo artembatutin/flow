@@ -42,8 +42,8 @@ A powerful macOS application that transforms your speech into intelligent, conte
 #### From Source
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/Flow.git
-   cd Flow
+   git clone https://github.com/artembatutin/flow.git
+   cd flow
    ```
 
 2. Open the project in Xcode:
@@ -54,7 +54,7 @@ A powerful macOS application that transforms your speech into intelligent, conte
 3. Build and run the project (⌘+R)
 
 #### From Release
-Download the latest signed DMG file from the [Releases](https://github.com/yourusername/Flow/releases) section.
+Download the latest signed DMG file from the [Releases](https://github.com/artembatutin/flow/releases) section.
 
 ## 📖 Documentation
 
@@ -105,8 +105,8 @@ Flow offers extensive customization through its settings interface:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/Flow.git
-   cd Flow
+   git clone https://github.com/artembatutin/flow.git
+   cd flow
    ```
 
 2. **Install dependencies**
@@ -119,20 +119,31 @@ Flow offers extensive customization through its settings interface:
    open Flow.xcodeproj
    ```
 
-4. **Build and run**
+4. **Build and run in Xcode**
    - Select a target device/simulator
    - Press ⌘+R to build and run
+
+5. **Or build from Terminal**
+   ```bash
+   make build
+   make install
+   ```
+
+6. **Clean local build output**
+   ```bash
+   make clean
+   ```
 
 ### Running Tests
 
 ```bash
 # Run unit tests
-xcodebuild test -project Flow.xcodeproj -scheme Flow
+xcodebuild test -project Flow.xcodeproj -scheme FlowTests -destination 'platform=macOS'
 ```
 
 ### Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome issues and pull requests through GitHub.
 
 ## 🐛 Troubleshooting
 
@@ -160,8 +171,8 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 ### Getting Help
 
 - **Documentation**: Check the `docs/` folder for detailed feature documentation
-- **Issues**: Report bugs and request features on the [GitHub Issues](https://github.com/yourusername/Flow/issues) page
-- **Discussions**: Join community discussions in the [GitHub Discussions](https://github.com/yourusername/Flow/discussions) section
+- **Issues**: Report bugs and request features on the [GitHub Issues](https://github.com/artembatutin/flow/issues) page
+- **Discussions**: Join community discussions in the [GitHub Discussions](https://github.com/artembatutin/flow/discussions) section
 
 ## 📄 License
 
@@ -185,4 +196,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for the developer community**
 
-For questions, support, or to contribute, please visit our [GitHub repository](https://github.com/yourusername/Flow).
+For questions, support, or to contribute, please visit the [GitHub repository](https://github.com/artembatutin/flow).

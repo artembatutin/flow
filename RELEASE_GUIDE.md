@@ -136,7 +136,7 @@ Download the latest DMG file from the assets below and follow the installation i
 - Microphone access permissions
 
 ## Support
-For issues and questions, please visit our [GitHub Issues](https://github.com/yourusername/Flow/issues) page.
+For issues and questions, please visit our [GitHub Issues](https://github.com/artembatutin/flow/issues) page.
 ```
 
 ## Security Considerations

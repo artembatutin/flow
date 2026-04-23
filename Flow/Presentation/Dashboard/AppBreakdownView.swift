@@ -19,26 +19,22 @@ struct AppBreakdownView: View {
     }
 
     var body: some View {
-        DashboardPanel(padding: 22) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Top apps")
-                            .font(.title3.weight(.semibold))
-                            .foregroundStyle(DashboardPalette.textPrimary)
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Top apps")
+                        .font(.headline)
+                        .foregroundStyle(DashboardPalette.textPrimary)
 
-                        Text(apps.isEmpty ? "Waiting for app-level data." : "\(totalSessions) sessions across \(apps.count) destinations.")
-                            .font(.subheadline)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                    }
-
-                    Spacer()
+                    Text(apps.isEmpty ? "Usage will appear here once dictation lands in apps." : "\(totalSessions) sessions across \(apps.count) apps")
+                        .font(.caption)
+                        .foregroundStyle(DashboardPalette.textSecondary)
                 }
 
                 if apps.isEmpty {
                     emptyStateView
                 } else {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 10) {
                         ForEach(apps) { app in
                             appRow(app)
                         }
@@ -49,97 +45,74 @@ struct AppBreakdownView: View {
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             Image(systemName: "app.badge")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(DashboardPalette.accentBlue)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(DashboardPalette.textSecondary)
 
             Text("No app breakdown yet")
-                .font(.headline)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(DashboardPalette.textPrimary)
 
-            Text("As dictation is used in different apps, this panel will show where voice work lands.")
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
+            Text("Run a few dictation sessions to see where voice work is landing.")
+                .font(.caption)
                 .foregroundStyle(DashboardPalette.textSecondary)
-                .frame(maxWidth: 360)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 36)
-        .background {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.black.opacity(0.18))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
-                )
-        }
+        .padding(.vertical, 22)
     }
 
     private func appRow(_ app: UsageMetrics.AppMetric) -> some View {
         let share = percentage(for: app)
 
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(DashboardPalette.accentBlue.opacity(0.16))
-                        .frame(width: 46, height: 46)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(DashboardPalette.surfaceSecondary)
+                    .frame(width: 34, height: 34)
+                    .overlay {
+                        Image(systemName: appIcon(for: app.appName))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DashboardPalette.textSecondary)
+                    }
 
-                    Image(systemName: appIcon(for: app.appName))
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(DashboardPalette.accentCyan)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(app.appName)
-                        .font(.headline.weight(.semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(DashboardPalette.textPrimary)
 
-                    Text("\(app.words) words")
-                        .font(.subheadline)
+                    Text("\(formatNumber(app.words)) words · \(app.sessions) sessions")
+                        .font(.caption)
                         .foregroundStyle(DashboardPalette.textSecondary)
                 }
 
-                Spacer()
+                Spacer(minLength: 12)
 
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(app.sessions)")
-                        .font(.headline.weight(.bold))
-                        .monospacedDigit()
-                        .foregroundStyle(DashboardPalette.textPrimary)
-
-                    Text("\(share)%")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(DashboardPalette.textSecondary)
-                }
+                Text("\(share)%")
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(DashboardPalette.textPrimary)
             }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule(style: .continuous)
-                        .fill(Color.white.opacity(0.06))
-                        .frame(height: 8)
+                        .fill(DashboardPalette.gridLine)
 
                     Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [DashboardPalette.accentBlue, DashboardPalette.accentCyan],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: max(18, proxy.size.width * CGFloat(share) / 100), height: 8)
+                        .fill(DashboardPalette.accentBlue.opacity(0.58))
+                        .frame(width: max(10, proxy.size.width * CGFloat(share) / 100))
                 }
             }
-            .frame(height: 8)
+            .frame(height: 4)
         }
-        .padding(16)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
         .background {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.black.opacity(0.18))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(DashboardPalette.surfaceSecondary)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
                 )
         }
@@ -149,6 +122,12 @@ struct AppBreakdownView: View {
         guard totalWords > 0 else { return 0 }
         let percent = (Double(app.words) / Double(totalWords)) * 100
         return Int(percent.rounded())
+    }
+
+    private func formatNumber(_ number: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: number)) ?? "\(number)"
     }
 
     private func appIcon(for appName: String) -> String {
@@ -185,12 +164,10 @@ struct AppBreakdownView: View {
         UsageMetrics.AppMetric(bundleId: "com.cursor", appName: "Cursor", sessions: 45, words: 2500),
         UsageMetrics.AppMetric(bundleId: "com.slack", appName: "Slack", sessions: 20, words: 800),
         UsageMetrics.AppMetric(bundleId: "com.apple.mail", appName: "Mail", sessions: 15, words: 600),
-        UsageMetrics.AppMetric(bundleId: "com.apple.safari", appName: "Safari", sessions: 10, words: 300),
-        UsageMetrics.AppMetric(bundleId: "com.apple.notes", appName: "Notes", sessions: 5, words: 150),
     ]
 
     AppBreakdownView(apps: sampleApps)
         .padding()
         .background(DashboardPalette.background)
-        .frame(width: 420)
+        .frame(width: 600)
 }

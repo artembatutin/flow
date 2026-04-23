@@ -32,79 +32,58 @@ struct MetricCardView: View {
     }
 
     var body: some View {
-        DashboardPanel(padding: 20, radius: 26) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top) {
-                    ZStack {
-                        Circle()
-                            .fill(accent.opacity(0.18))
-                            .frame(width: 46, height: 46)
+        DashboardSurface(padding: 12, radius: DashboardMetrics.surfaceRadius, secondary: true) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 10) {
+                    Text(title.uppercased())
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DashboardPalette.textMuted)
 
-                        Image(systemName: icon)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(accent)
-                    }
-
-                    Spacer()
+                    Spacer(minLength: 8)
 
                     if let trend {
                         trendBadge(trend)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(accent.opacity(0.82))
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(title.uppercased())
-                        .font(.caption.weight(.bold))
-                        .tracking(1.2)
-                        .foregroundStyle(DashboardPalette.textMuted)
-
+                VStack(alignment: .leading, spacing: 2) {
                     Text(value)
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .font(.system(size: 22, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(DashboardPalette.textPrimary)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.8)
 
                     Text(subtitle)
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(DashboardPalette.textSecondary)
                 }
             }
+            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
         }
     }
 
-    @ViewBuilder
     private func trendBadge(_ trend: AnalyticsManager.Trend) -> some View {
-        HStack(spacing: 4) {
-            switch trend {
-            case .up:
-                Image(systemName: "arrow.up.right")
-                    .font(.caption2.weight(.bold))
-            case .down:
-                Image(systemName: "arrow.down.right")
-                    .font(.caption2.weight(.bold))
-            case .neutral:
-                Image(systemName: "minus")
-                    .font(.caption2.weight(.bold))
-            }
-
-            Text(trend.displayText)
-                .font(.caption.weight(.bold))
-                .monospacedDigit()
-        }
-        .foregroundStyle(trendColor(trend))
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(trendColor(trend).opacity(0.14))
-        .clipShape(Capsule(style: .continuous))
+        Text(trend.displayText)
+            .font(.caption2.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(trendColor(trend))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(trendColor(trend).opacity(0.10))
+            .clipShape(Capsule(style: .continuous))
     }
 
     private func trendColor(_ trend: AnalyticsManager.Trend) -> Color {
         switch trend {
         case .up:
-            return DashboardPalette.accentCyan
+            return DashboardPalette.accentGreen
         case .down:
-            return DashboardPalette.accentRose
+            return DashboardPalette.destructive
         case .neutral:
             return DashboardPalette.textSecondary
         }
@@ -112,35 +91,23 @@ struct MetricCardView: View {
 }
 
 #Preview {
-    HStack {
+    HStack(spacing: 12) {
         MetricCardView(
             title: "Words",
-            value: "1,234",
+            value: "1,408",
             subtitle: "this week",
             icon: "text.word.spacing",
-            accent: DashboardPalette.accentBlue,
             trend: .up(percent: 12)
         )
 
         MetricCardView(
             title: "Sessions",
-            value: "45",
-            subtitle: "dictation windows",
+            value: "46",
+            subtitle: "captured",
             icon: "waveform.badge.mic",
-            accent: DashboardPalette.accentCyan,
-            trend: .down(percent: 5)
-        )
-
-        MetricCardView(
-            title: "Time Saved",
-            value: "2h 15m",
-            subtitle: "typing avoided",
-            icon: "bolt.fill",
-            accent: DashboardPalette.accentAmber,
-            trend: .neutral
+            accent: DashboardPalette.accentCyan
         )
     }
     .padding()
     .background(DashboardPalette.background)
-    .frame(width: 780)
 }
