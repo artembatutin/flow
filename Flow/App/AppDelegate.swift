@@ -23,6 +23,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             // Load the selected model
             await AppDependencies.shared.loadSelectedModel()
+
+            // The onboarding window is AppKit-owned so it only appears until setup is complete.
+            OnboardingWindowController.shared.showWindowIfNeeded()
             
             // Start listening for hotkeys if permissions are granted
             AppDependencies.shared.startHotkeyListening()
@@ -41,5 +44,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         // Keep running even when all windows are closed (menu bar app)
         return false
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard urls.contains(where: { $0.scheme == "flow" }) else { return }
+
+        Task { @MainActor in
+            AppDependencies.shared.taskManager.reloadWorkspace()
+            AppDependencies.shared.taskManager.reloadWidgetTimelines()
+            DashboardWindowController.shared.showWindow(createNewTask: urls.contains(where: isNewTaskURL))
+        }
+    }
+
+    private func isNewTaskURL(_ url: URL) -> Bool {
+        url.scheme == "flow" &&
+            url.host == "tasks" &&
+            url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")) == "new"
     }
 }

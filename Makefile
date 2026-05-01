@@ -15,14 +15,19 @@ build:
 		-scheme "$(SCHEME)" \
 		-configuration "$(CONFIGURATION)" \
 		-destination 'platform=macOS' \
+		-allowProvisioningUpdates \
 		CONFIGURATION_BUILD_DIR="$(BUILD_DIR)" \
 		build
 
 install: build
 	rm -rf "$(APPLICATIONS_DIR)/$(APP_NAME).app"
 	ditto "$(APP_BUNDLE)" "$(APPLICATIONS_DIR)/$(APP_NAME).app"
+	-pluginkit -r "$(APP_BUNDLE)/Contents/PlugIns/FlowWidget.appex"
+	/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted "$(APPLICATIONS_DIR)/$(APP_NAME).app"
+	pluginkit -a "$(APPLICATIONS_DIR)/$(APP_NAME).app/Contents/PlugIns/FlowWidget.appex"
 
 uninstall:
+	-pluginkit -r "$(APPLICATIONS_DIR)/$(APP_NAME).app/Contents/PlugIns/FlowWidget.appex"
 	rm -rf "$(APPLICATIONS_DIR)/$(APP_NAME).app"
 
 clean:

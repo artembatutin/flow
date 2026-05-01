@@ -46,25 +46,6 @@ struct FlowApp: App {
         }
         .menuBarExtraStyle(.window)
         
-        // Onboarding Window
-        Window(AppBranding.onboardingWindowTitle, id: "onboarding") {
-            OnboardingView()
-                .environmentObject(settingsStore)
-                .environmentObject(permissionsManager)
-                .environmentObject(modelManager)
-                .environmentObject(speechRecognizer)
-                .environmentObject(hotkeyManager)
-                .environmentObject(sessionManager)
-                .environmentObject(textInjectionService)
-                .environmentObject(dictionaryManager)
-                .environmentObject(inputFieldDetector)
-                .environmentObject(snippetManager)
-                .environmentObject(taskManager)
-        }
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
-        .defaultPosition(.center)
-        
         // Settings Window
         Settings {
             SettingsView()

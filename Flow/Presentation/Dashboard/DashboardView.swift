@@ -27,12 +27,11 @@ enum DashboardSection: String, CaseIterable, Identifiable {
 }
 
 struct DashboardView: View {
+    @EnvironmentObject var dashboardNavigation: DashboardNavigation
     @EnvironmentObject var taskManager: TaskManager
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var textInjectionService: TextInjectionService
     @EnvironmentObject var analyticsManager: AnalyticsManager
-
-    @State private var section: DashboardSection = .tasks
 
     private var openTasks: Int {
         taskManager.tasks.filter { $0.status != .done }.count
@@ -79,9 +78,9 @@ struct DashboardView: View {
                     DashboardSidebarRow(
                         title: item.rawValue,
                         icon: item.icon,
-                        selected: section == item
+                        selected: dashboardNavigation.section == item
                     ) {
-                        section = item
+                        dashboardNavigation.section = item
                     }
                 }
             }
@@ -104,10 +103,11 @@ struct DashboardView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        switch section {
+        switch dashboardNavigation.section {
         case .tasks:
             TasksWorkspaceView()
                 .environmentObject(taskManager)
+                .environmentObject(dashboardNavigation)
         case .dictation:
             UsageDashboardView(analyticsManager: analyticsManager)
         case .history:
@@ -133,6 +133,7 @@ struct DashboardView: View {
 }
 
 private struct TasksWorkspaceView: View {
+    @EnvironmentObject var dashboardNavigation: DashboardNavigation
     @EnvironmentObject var taskManager: TaskManager
 
     @State private var selectedProjectID: UUID?
@@ -156,9 +157,13 @@ private struct TasksWorkspaceView: View {
         }
         .onAppear {
             syncSelection()
+            presentNewTaskIfRequested()
         }
         .onChange(of: selectedProjectID) { _, _ in
             syncSelection()
+        }
+        .onChange(of: dashboardNavigation.newTaskRequestID) { _, _ in
+            presentNewTaskIfRequested()
         }
     }
 
@@ -396,6 +401,12 @@ private struct TasksWorkspaceView: View {
 
     private func syncSelection() {
         taskManager.filters.selectedProjectID = selectedProjectID
+    }
+
+    private func presentNewTaskIfRequested() {
+        guard dashboardNavigation.newTaskRequestID != nil else { return }
+        showingNewTaskSheet = true
+        dashboardNavigation.consumeNewTaskRequest()
     }
 }
 
@@ -892,6 +903,7 @@ private struct TaskTaxonomySheet: View {
     let permissionsManager = PermissionsManager()
 
     DashboardView()
+        .environmentObject(DashboardNavigation())
         .environmentObject(taskManager)
         .environmentObject(SessionManager(settingsStore: settingsStore))
         .environmentObject(

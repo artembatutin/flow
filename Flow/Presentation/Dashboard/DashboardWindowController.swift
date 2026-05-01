@@ -6,17 +6,39 @@
 //
 
 import Cocoa
+import Combine
 import SwiftUI
+
+@MainActor
+final class DashboardNavigation: ObservableObject {
+    @Published var section: DashboardSection = .tasks
+    @Published private(set) var newTaskRequestID: UUID?
+
+    func showTasks(createNewTask: Bool = false) {
+        section = .tasks
+
+        if createNewTask {
+            newTaskRequestID = UUID()
+        }
+    }
+
+    func consumeNewTaskRequest() {
+        newTaskRequestID = nil
+    }
+}
 
 @MainActor
 class DashboardWindowController {
     static let shared = DashboardWindowController()
 
     private var window: NSWindow?
+    private let navigation = DashboardNavigation()
 
     private init() {}
 
-    func showWindow() {
+    func showWindow(createNewTask: Bool = false) {
+        navigation.showTasks(createNewTask: createNewTask)
+
         if let existingWindow = window {
             existingWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -29,6 +51,7 @@ class DashboardWindowController {
             .environmentObject(dependencies.sessionManager)
             .environmentObject(dependencies.textInjectionService)
             .environmentObject(dependencies.analyticsManager)
+            .environmentObject(navigation)
 
         let hostingController = NSHostingController(rootView: dashboardView)
         let newWindow = NSWindow(contentViewController: hostingController)

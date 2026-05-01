@@ -10,6 +10,7 @@ import SwiftUI
 struct OnboardingView: View {
     @EnvironmentObject var settingsStore: SettingsStore
     @EnvironmentObject var permissionsManager: PermissionsManager
+    var onCompletion: (() -> Void)?
     
     @State private var currentStep = 0
     @Environment(\.dismiss) private var dismiss
@@ -23,20 +24,13 @@ struct OnboardingView: View {
                 .padding()
             
             // Content
-            TabView(selection: $currentStep) {
-                welcomeStep
-                    .tag(0)
-                
-                microphoneStep
-                    .tag(1)
-                
-                accessibilityStep
-                    .tag(2)
-                
-                completionStep
-                    .tag(3)
+            ZStack {
+                currentStepView
+                    .id(currentStep)
+                    .transition(.opacity)
             }
-            .tabViewStyle(.automatic)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(.easeInOut(duration: 0.18), value: currentStep)
             
             // Navigation
             HStack {
@@ -61,6 +55,7 @@ struct OnboardingView: View {
                 } else {
                     Button("Get Started") {
                         settingsStore.hasCompletedOnboarding = true
+                        onCompletion?()
                         dismiss()
                     }
                     .buttonStyle(.borderedProminent)
@@ -70,6 +65,20 @@ struct OnboardingView: View {
             .padding()
         }
         .frame(width: 500, height: 450)
+    }
+
+    @ViewBuilder
+    private var currentStepView: some View {
+        switch currentStep {
+        case 0:
+            welcomeStep
+        case 1:
+            microphoneStep
+        case 2:
+            accessibilityStep
+        default:
+            completionStep
+        }
     }
     
     // MARK: - Welcome Step

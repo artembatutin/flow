@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import WidgetKit
 
 @MainActor
 class TaskManager: ObservableObject {
@@ -22,7 +23,8 @@ class TaskManager: ObservableObject {
         if let customWorkspaceFileURL {
             return customWorkspaceFileURL
         }
-        return (try? AppSupportPaths.fileURL("task_workspace.json", fileManager: fileManager)) ??
+        return (try? SharedTaskWorkspace.fileURL(fileManager: fileManager)) ??
+            (try? AppSupportPaths.fileURL("task_workspace.json", fileManager: fileManager)) ??
             fileManager.temporaryDirectory.appendingPathComponent("task_workspace.json")
     }
 
@@ -42,6 +44,10 @@ class TaskManager: ObservableObject {
         labels
             .filter { !$0.isArchived }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    var sortedTasks: [TaskItem] {
+        tasks.sorted(by: taskSort)
     }
 
     func filteredTasks(using filter: TaskFilterState? = nil) -> [TaskItem] {
@@ -77,6 +83,15 @@ class TaskManager: ObservableObject {
                 return haystack.contains(trimmedSearch)
             }
             .sorted(by: taskSort)
+    }
+
+    func reloadWorkspace() {
+        loadWorkspace()
+    }
+
+    func reloadWidgetTimelines() {
+        WidgetCenter.shared.reloadTimelines(ofKind: SharedTaskWorkspace.widgetKind)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func createTask(
@@ -253,14 +268,20 @@ class TaskManager: ObservableObject {
     }
 
     private func loadWorkspace() {
+        if customWorkspaceFileURL == nil {
+            let workspace = SharedTaskWorkspace.load(fileManager: fileManager)
+            apply(workspace)
+            reloadWidgetTimelines()
+            return
+        }
+
         guard fileManager.fileExists(atPath: workspaceFileURL.path) else { return }
         do {
             let data = try Data(contentsOf: workspaceFileURL)
             let decoder = JSONDecoder()
             let workspace = try decoder.decode(TaskWorkspaceStore.self, from: data)
-            tasks = workspace.tasks
-            projects = workspace.projects
-            labels = workspace.labels
+            apply(workspace)
+            reloadWidgetTimelines()
         } catch {
             print("Failed to load task workspace: \(error)")
         }
@@ -269,17 +290,28 @@ class TaskManager: ObservableObject {
     private func saveWorkspace() {
         let workspace = TaskWorkspaceStore(tasks: tasks, projects: projects, labels: labels)
         do {
-            try fileManager.createDirectory(
-                at: workspaceFileURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
-            )
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let data = try encoder.encode(workspace)
-            try data.write(to: workspaceFileURL, options: .atomic)
+            if customWorkspaceFileURL == nil {
+                try SharedTaskWorkspace.save(workspace, fileManager: fileManager)
+            } else {
+                try fileManager.createDirectory(
+                    at: workspaceFileURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = try encoder.encode(workspace)
+                try data.write(to: workspaceFileURL, options: .atomic)
+            }
+            reloadWidgetTimelines()
         } catch {
             print("Failed to save task workspace: \(error)")
         }
+    }
+
+    private func apply(_ workspace: TaskWorkspaceStore) {
+        tasks = workspace.tasks
+        projects = workspace.projects
+        labels = workspace.labels
     }
 
     private func taskSort(lhs: TaskItem, rhs: TaskItem) -> Bool {
