@@ -97,7 +97,7 @@ class TaskManager: ObservableObject {
     func createTask(
         title: String,
         notes: String? = nil,
-        status: TaskStatus = .inbox,
+        status: TaskStatus = .todo,
         priority: TaskPriority = .medium,
         projectID: UUID? = nil,
         labelIDs: [UUID] = [],

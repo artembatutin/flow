@@ -67,7 +67,7 @@ class TaskCaptureService {
         let commandBodyTokens = Array(allTokens.dropFirst())
         var consumed = Array(repeating: false, count: commandBodyTokens.count)
 
-        var status: TaskStatus = .inbox
+        var status: TaskStatus = .todo
         var priority: TaskPriority = .medium
         var projectID: UUID?
         var labelIDs: [UUID] = []
@@ -141,7 +141,7 @@ class TaskCaptureService {
                     start: $0.start,
                     end: $0.end,
                     length: record.tokens.count,
-                    normalizedPhrase: phrase,
+                    normalizedPhrase: record.normalizedPhrase,
                     projectID: project.id,
                     labelID: nil,
                     status: nil,
@@ -159,7 +159,7 @@ class TaskCaptureService {
                     start: $0.start,
                     end: $0.end,
                     length: record.tokens.count,
-                    normalizedPhrase: phrase,
+                    normalizedPhrase: record.normalizedPhrase,
                     projectID: nil,
                     labelID: label.id,
                     status: nil,
@@ -169,21 +169,22 @@ class TaskCaptureService {
         }
 
         let statuses: [(String, TaskStatus)] = [
+            ("in-progress", .inProgress),
             ("in progress", .inProgress),
-            ("inbox", .inbox),
-            ("next", .next),
+            ("to do", .todo),
+            ("todo", .todo),
             ("done", .done)
         ]
 
         for (phrase, value) in statuses {
-            let record = PhraseRecord(normalizedPhrase: phrase, tokens: phrase.split(separator: " ").map(String.init))
+            let record = phraseRecord(for: phrase)
             candidates.append(contentsOf: matches(for: record, in: tokens).map {
                 Candidate(
                     kind: .status,
                     start: $0.start,
                     end: $0.end,
                     length: record.tokens.count,
-                    normalizedPhrase: phrase,
+                    normalizedPhrase: record.normalizedPhrase,
                     projectID: nil,
                     labelID: nil,
                     status: value,
@@ -201,14 +202,14 @@ class TaskCaptureService {
         ]
 
         for (phrase, value) in priorities {
-            let record = PhraseRecord(normalizedPhrase: phrase, tokens: phrase.split(separator: " ").map(String.init))
+            let record = phraseRecord(for: phrase)
             candidates.append(contentsOf: matches(for: record, in: tokens).map {
                 Candidate(
                     kind: .priority,
                     start: $0.start,
                     end: $0.end,
                     length: record.tokens.count,
-                    normalizedPhrase: phrase,
+                    normalizedPhrase: record.normalizedPhrase,
                     projectID: nil,
                     labelID: nil,
                     status: nil,
@@ -218,6 +219,14 @@ class TaskCaptureService {
         }
 
         return candidates
+    }
+
+    private func phraseRecord(for phrase: String) -> PhraseRecord {
+        let normalizedPhrase = normalizePhrase(phrase)
+        return PhraseRecord(
+            normalizedPhrase: normalizedPhrase,
+            tokens: normalizedPhrase.split(separator: " ").map(String.init)
+        )
     }
 
     private func selectCandidates(_ candidates: [Candidate]) -> [Candidate] {

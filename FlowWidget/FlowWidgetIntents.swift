@@ -10,7 +10,7 @@ import WidgetKit
 
 struct CreateQuickTaskIntent: AppIntent {
     static var title: LocalizedStringResource = "Create Task"
-    static var description = IntentDescription("Creates a new inbox task in Flow.")
+    static var description = IntentDescription("Creates a new todo task in Flow.")
 
     func perform() async throws -> some IntentResult {
         var workspace = SharedTaskWorkspace.load()
@@ -22,7 +22,7 @@ struct CreateQuickTaskIntent: AppIntent {
         workspace.tasks.append(
             TaskItem(
                 title: "New task \(formatter.string(from: timestamp))",
-                status: .inbox,
+                status: .todo,
                 priority: .medium,
                 createdAt: timestamp,
                 updatedAt: timestamp
@@ -46,7 +46,7 @@ struct UpdateTaskStatusIntent: AppIntent {
 
     init() {
         taskID = ""
-        status = TaskStatus.inbox.rawValue
+        status = TaskStatus.todo.rawValue
     }
 
     init(taskID: String, status: String) {
@@ -56,7 +56,7 @@ struct UpdateTaskStatusIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         guard let id = UUID(uuidString: taskID),
-              let status = TaskStatus(rawValue: status)
+              let status = TaskStatus(persistedRawValue: status)
         else {
             return .result()
         }
@@ -77,8 +77,8 @@ struct UpdateTaskStatusIntent: AppIntent {
     }
 }
 
-struct PromoteTaskIntent: AppIntent {
-    static var title: LocalizedStringResource = "Promote Task"
+struct StartTaskIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start Task"
 
     @Parameter(title: "Task ID")
     var taskID: String
@@ -101,7 +101,7 @@ struct PromoteTaskIntent: AppIntent {
             return .result()
         }
 
-        workspace.tasks[index].status = .next
+        workspace.tasks[index].status = .inProgress
         workspace.tasks[index].updatedAt = Date()
 
         try SharedTaskWorkspace.save(workspace)

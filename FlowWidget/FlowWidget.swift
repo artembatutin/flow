@@ -22,7 +22,7 @@ struct FlowTasksProvider: TimelineProvider {
         return FlowTasksEntry(
             date: Date(),
             tasks: [
-                TaskItem(title: "Review captured tasks", status: .next, priority: .high, projectID: project.id),
+                TaskItem(title: "Review captured tasks", status: .todo, priority: .high, projectID: project.id),
                 TaskItem(title: "Send a follow-up", status: .inProgress, priority: .medium)
             ],
             projectNames: [project.id: project.name]
@@ -264,9 +264,9 @@ private struct FlowWidgetTaskRow: View {
 
             Spacer(minLength: 0)
 
-            if !compact, task.status != .next {
-                Button(intent: PromoteTaskIntent(taskID: task.id.uuidString)) {
-                    Text("Next")
+            if !compact, task.status == .todo {
+                Button(intent: StartTaskIntent(taskID: task.id.uuidString)) {
+                    Text("Start")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.blue)
                         .padding(.horizontal, 7)

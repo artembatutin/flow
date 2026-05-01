@@ -18,7 +18,7 @@ final class TaskCaptureServiceTests: XCTestCase {
         let result = try service.parse("task draft the launch email")
 
         XCTAssertEqual(result.title, "draft the launch email")
-        XCTAssertEqual(result.status, .inbox)
+        XCTAssertEqual(result.status, .todo)
         XCTAssertEqual(result.priority, .medium)
         XCTAssertNil(result.projectID)
         XCTAssertTrue(result.labelIDs.isEmpty)
@@ -54,6 +54,19 @@ final class TaskCaptureServiceTests: XCTestCase {
         XCTAssertEqual(result.labelIDs, [label.id])
         XCTAssertEqual(result.priority, .high)
         XCTAssertEqual(result.title, "review renewals")
+    }
+
+    func testCurrentStatusPhrasesAreRemovedFromTitle() throws {
+        let manager = TaskManager(workspaceFileURL: temporaryURL())
+        let service = TaskCaptureService(taskManager: manager)
+
+        let todo = try service.parse("task todo draft release notes")
+        XCTAssertEqual(todo.status, .todo)
+        XCTAssertEqual(todo.title, "draft release notes")
+
+        let inProgress = try service.parse("task in-progress investigate crash")
+        XCTAssertEqual(inProgress.status, .inProgress)
+        XCTAssertEqual(inProgress.title, "investigate crash")
     }
 
     func testEmptyTitleAfterMetadataRemovalFails() throws {

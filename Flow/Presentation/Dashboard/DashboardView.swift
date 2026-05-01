@@ -650,7 +650,7 @@ private struct NewTaskSheet: View {
 
     @State private var title = ""
     @State private var notes = ""
-    @State private var status: TaskStatus = .inbox
+    @State private var status: TaskStatus = .todo
     @State private var priority: TaskPriority = .medium
     @State private var projectID: UUID?
     @State private var labelIDs: Set<UUID> = []

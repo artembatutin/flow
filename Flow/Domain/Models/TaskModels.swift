@@ -9,19 +9,47 @@ import Foundation
 import SwiftUI
 
 enum TaskStatus: String, CaseIterable, Codable, Identifiable {
-    case inbox
-    case next
-    case inProgress
+    case todo
+    case inProgress = "in-progress"
     case done
 
     var id: String { rawValue }
 
+    init?(persistedRawValue rawValue: String) {
+        switch rawValue {
+        case "todo", "inbox", "next":
+            self = .todo
+        case "in-progress", "inProgress":
+            self = .inProgress
+        case "done":
+            self = .done
+        default:
+            return nil
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+
+        guard let status = TaskStatus(persistedRawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unknown task status: \(rawValue)"
+            )
+        }
+        self = status
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
     var displayName: String {
         switch self {
-        case .inbox:
-            return "Inbox"
-        case .next:
-            return "Next"
+        case .todo:
+            return "Todo"
         case .inProgress:
             return "In Progress"
         case .done:
@@ -31,10 +59,8 @@ enum TaskStatus: String, CaseIterable, Codable, Identifiable {
 
     var shortName: String {
         switch self {
-        case .inbox:
-            return "Inbox"
-        case .next:
-            return "Next"
+        case .todo:
+            return "Todo"
         case .inProgress:
             return "Doing"
         case .done:
@@ -44,9 +70,7 @@ enum TaskStatus: String, CaseIterable, Codable, Identifiable {
 
     var tintColor: Color {
         switch self {
-        case .inbox:
-            return .secondary
-        case .next:
+        case .todo:
             return .blue
         case .inProgress:
             return .orange
@@ -200,7 +224,7 @@ struct TaskItem: Identifiable, Codable, Equatable, Hashable {
         id: UUID = UUID(),
         title: String,
         notes: String? = nil,
-        status: TaskStatus = .inbox,
+        status: TaskStatus = .todo,
         priority: TaskPriority = .medium,
         projectID: UUID? = nil,
         labelIDs: [UUID] = [],
