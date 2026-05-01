@@ -410,17 +410,16 @@ private struct TaskTableRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             statusToggleButton(for: task)
-                .padding(.top, 21)
+                .padding(.top, 13)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 titleField(for: task)
                 metadataRow(for: task)
-                noteField(for: task)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
 
-            VStack(alignment: .trailing, spacing: 12) {
+            VStack(alignment: .trailing, spacing: 10) {
                 DashboardMetaBadge(text: relativeDate(task.updatedAt), tint: DashboardPalette.textSecondary, compact: true)
                     .frame(width: 86, alignment: .trailing)
 
@@ -439,8 +438,8 @@ private struct TaskTableRow: View {
             .padding(.top, 11)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(minHeight: 86, alignment: .center)
+        .padding(.vertical, 14)
+        .frame(minHeight: 74, alignment: .center)
         .background {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(rowBackground)
@@ -537,21 +536,6 @@ private struct TaskTableRow: View {
         }
         .buttonStyle(.plain)
         .fixedSize()
-    }
-
-    private func noteField(for task: TaskItem) -> some View {
-        TextField(
-            "Add note",
-            text: Binding(
-                get: { task.notes ?? "" },
-                set: { taskManager.updateTask(id: task.id, notes: $0) }
-            ),
-            axis: .vertical
-        )
-        .textFieldStyle(.plain)
-        .font(.caption2)
-        .foregroundStyle(DashboardPalette.textSecondary)
-        .lineLimit(2)
     }
 
     private func statusMenu(for task: TaskItem) -> some View {

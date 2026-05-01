@@ -80,7 +80,7 @@ struct FlowTasksWidgetView: View {
     }
 
     private var visibleTasks: [TaskItem] {
-        Array(openTasks.prefix(taskLimit))
+        Array(openTasks.prefix(visibleTaskLimit))
     }
 
     private var isSmall: Bool {
@@ -91,17 +91,30 @@ struct FlowTasksWidgetView: View {
         family == .systemExtraLarge
     }
 
-    private var taskLimit: Int {
+    private var taskCapacity: Int {
         switch family {
         case .systemSmall:
             return 2
         case .systemMedium:
             return 3
+        case .systemLarge:
+            return 4
         case .systemExtraLarge:
-            return 10
-        default:
             return 6
+        @unknown default:
+            return 4
         }
+    }
+
+    private var visibleTaskLimit: Int {
+        if hiddenTaskCount > 0, !isSmall {
+            return max(taskCapacity - 1, 1)
+        }
+        return taskCapacity
+    }
+
+    private var hiddenTaskCount: Int {
+        max(openTasks.count - visibleTasks.count, 0)
     }
 
     private var tasksURL: URL {
@@ -132,6 +145,10 @@ struct FlowTasksWidgetView: View {
                             compact: isSmall,
                             spacious: isExtraLarge
                         )
+                    }
+
+                    if hiddenTaskCount > 0, !isSmall {
+                        overflowIndicator
                     }
                 }
             }
@@ -221,6 +238,23 @@ struct FlowTasksWidgetView: View {
             .buttonStyle(.plain)
         }
     }
+
+    private var overflowIndicator: some View {
+        Link(destination: tasksURL) {
+            HStack(spacing: 6) {
+                Image(systemName: "ellipsis.circle")
+                    .font(.caption.weight(.semibold))
+
+                Text("\(hiddenTaskCount) more in Flow")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 2)
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 private struct FlowWidgetTaskRow: View {
@@ -296,6 +330,7 @@ private struct FlowWidgetBadge: View {
         Text(title)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
+            .lineLimit(1)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
             .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
