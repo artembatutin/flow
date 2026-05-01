@@ -221,12 +221,6 @@ class AppDependencies {
             }
         }
         
-        hotkeyManager.onToggleActivated = { [weak self] in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                // Toggle mode state is handled by onHotkeyPressed/onHotkeyReleased
-            }
-        }
     }
     
     private func startRecording() {
@@ -287,7 +281,7 @@ class AppDependencies {
         guard audioEngine.isRecording else { return }
         
         // Stop streaming transcription first
-        let streamedText = await streamingTranscriber.stopStreaming()
+        _ = await streamingTranscriber.stopStreaming()
         
         do {
             let audioBuffer = try audioEngine.stopRecording()

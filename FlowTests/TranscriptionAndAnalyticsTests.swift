@@ -39,6 +39,28 @@ final class TranscriptionAndAnalyticsTests: XCTestCase {
         XCTAssertEqual(sessions[1].linkedTaskID, UUID(uuidString: "33333333-3333-3333-3333-333333333333"))
     }
 
+    func testDecodedTranscriptionSessionCountersCannotBeNegative() throws {
+        let json = """
+        {
+          "id": "11111111-1111-1111-1111-111111111111",
+          "timestamp": "2026-04-22T12:00:00Z",
+          "transcription": "safe decoded session",
+          "duration": 2.0,
+          "modelUsed": "base.en",
+          "wordCount": -12,
+          "characterCount": -50
+        }
+        """
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let session = try decoder.decode(TranscriptionSession.self, from: Data(json.utf8))
+
+        XCTAssertEqual(session.wordCount, 0)
+        XCTAssertEqual(session.characterCount, 0)
+    }
+
     func testAnalyticsIgnoreTaskSessions() throws {
         let analytics = AnalyticsManager(metricsFileURL: temporaryURL())
 

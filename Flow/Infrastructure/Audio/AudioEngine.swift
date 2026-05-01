@@ -53,6 +53,18 @@ struct AudioEngineConfiguration {
     var silenceThreshold: Float = 0.01
     /// Duration of silence before auto-stop (seconds)
     var silenceDuration: TimeInterval = 2.0
+
+    nonisolated init(
+        maxRecordingDuration: TimeInterval = 120.0,
+        silenceDetectionEnabled: Bool = false,
+        silenceThreshold: Float = 0.01,
+        silenceDuration: TimeInterval = 2.0
+    ) {
+        self.maxRecordingDuration = maxRecordingDuration
+        self.silenceDetectionEnabled = silenceDetectionEnabled
+        self.silenceThreshold = silenceThreshold
+        self.silenceDuration = silenceDuration
+    }
 }
 
 @MainActor
@@ -78,6 +90,7 @@ class AudioEngine: ObservableObject {
     
     private var levelUpdateTask: Task<Void, Never>?
     private var audioDeviceListener: AudioObjectPropertyListenerBlock?
+    private var engineConfigurationObserver: NSObjectProtocol?
     private var isRestartingEngine: Bool = false
     
     // Callback for when max duration or silence auto-stop triggers
@@ -370,6 +383,7 @@ class AudioEngine: ObservableObject {
         stopDurationTimer()
         levelUpdateTask?.cancel()
         removeCoreAudioDeviceListener()
+        removeNotifications()
         
         if isRecording {
             inputNode?.removeTap(onBus: 0)
@@ -388,13 +402,13 @@ class AudioEngine: ObservableObject {
     private func setupNotifications() {
         // On macOS, we listen for audio engine configuration changes
         // which occur when audio devices are connected/disconnected
-        NotificationCenter.default.addObserver(
+        engineConfigurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange,
             object: nil,
             queue: .main
-        ) { [weak self] notification in
+        ) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.handleConfigurationChange(notification)
+                self?.handleConfigurationChange()
             }
         }
         
@@ -402,7 +416,7 @@ class AudioEngine: ObservableObject {
         setupCoreAudioDeviceListener()
     }
     
-    private func handleConfigurationChange(_ notification: Notification) {
+    private func handleConfigurationChange() {
         // Handle audio device changes - the engine configuration changed
         // Automatically restart with the new default input device
         if isRecording {
@@ -527,6 +541,12 @@ class AudioEngine: ObservableObject {
             listener
         )
         audioDeviceListener = nil
+    }
+
+    private func removeNotifications() {
+        guard let engineConfigurationObserver else { return }
+        NotificationCenter.default.removeObserver(engineConfigurationObserver)
+        self.engineConfigurationObserver = nil
     }
 }
 

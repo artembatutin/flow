@@ -18,7 +18,6 @@ class DictionaryManager: ObservableObject {
     @Published var selectedCategory: DictionaryEntry.Category?
     
     private let store: DictionaryStore
-    private var cancellables = Set<AnyCancellable>()
     
     var filteredEntries: [DictionaryEntry] {
         var result = entries
@@ -149,9 +148,10 @@ class DictionaryManager: ObservableObject {
         let sortedEntries = entries.sorted { $0.spokenForm.count > $1.spokenForm.count }
         
         for entry in sortedEntries {
+            let previous = result
             result = replaceWholeWord(in: result, target: entry.spokenForm, replacement: entry.writtenForm)
             
-            if result != text {
+            if result != previous {
                 Task { @MainActor in
                     self.recordUsage(for: entry.id)
                 }

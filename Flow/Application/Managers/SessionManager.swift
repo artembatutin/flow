@@ -40,23 +40,39 @@ class SessionManager: ObservableObject {
     
     private let settingsStore: SettingsStore
     private let fileManager = FileManager.default
+    private let customSessionsFileURL: URL?
+    private let customStatisticsFileURL: URL?
     
     // MARK: - File Paths
     
     private var sessionsFileURL: URL {
-        (try? AppSupportPaths.fileURL("sessions.json", fileManager: fileManager)) ??
+        if let customSessionsFileURL {
+            return customSessionsFileURL
+        }
+
+        return (try? AppSupportPaths.fileURL("sessions.json", fileManager: fileManager)) ??
             fileManager.temporaryDirectory.appendingPathComponent("sessions.json")
     }
     
     private var statisticsFileURL: URL {
-        (try? AppSupportPaths.fileURL("statistics.json", fileManager: fileManager)) ??
+        if let customStatisticsFileURL {
+            return customStatisticsFileURL
+        }
+
+        return (try? AppSupportPaths.fileURL("statistics.json", fileManager: fileManager)) ??
             fileManager.temporaryDirectory.appendingPathComponent("statistics.json")
     }
     
     // MARK: - Initialization
     
-    init(settingsStore: SettingsStore) {
+    init(
+        settingsStore: SettingsStore,
+        sessionsFileURL: URL? = nil,
+        statisticsFileURL: URL? = nil
+    ) {
         self.settingsStore = settingsStore
+        self.customSessionsFileURL = sessionsFileURL
+        self.customStatisticsFileURL = statisticsFileURL
         loadSessions()
         loadStatistics()
         refreshDailyStats()
@@ -161,6 +177,10 @@ class SessionManager: ObservableObject {
     
     private func saveSessions() {
         do {
+            try fileManager.createDirectory(
+                at: sessionsFileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             let data = try encoder.encode(sessions)
@@ -184,6 +204,10 @@ class SessionManager: ObservableObject {
     
     private func saveStatistics() {
         do {
+            try fileManager.createDirectory(
+                at: statisticsFileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             let data = try encoder.encode(statistics)
@@ -196,7 +220,7 @@ class SessionManager: ObservableObject {
     // MARK: - History Limit
     
     private func enforceHistoryLimit() {
-        let maxItems = settingsStore.maxHistoryItems
+        let maxItems = max(0, settingsStore.maxHistoryItems)
         if sessions.count > maxItems {
             let sessionsToRemove = sessions.suffix(from: maxItems)
             for session in sessionsToRemove {

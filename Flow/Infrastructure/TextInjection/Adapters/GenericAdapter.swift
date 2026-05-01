@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import AppKit
 
 /// Generic fallback adapter for any application not handled by specific adapters
 final class GenericAdapter: TargetAdapter {
@@ -29,13 +28,7 @@ final class GenericAdapter: TargetAdapter {
         true
     }
     
-    func inject(text: String, using injector: TextInjector) async throws -> InjectionResult {
-        let preparedText = prepareText(text)
-        return try await injector.inject(text: preparedText, mode: preferredMode)
-    }
-    
     func prepareText(_ text: String) -> String {
-        // No special preparation for generic apps
         text
     }
 }

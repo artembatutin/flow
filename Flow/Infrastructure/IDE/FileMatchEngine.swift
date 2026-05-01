@@ -177,28 +177,25 @@ struct FileMatchEngine {
         if m == 0 { return n }
         if n == 0 { return m }
         
-        var matrix = [[Int]](repeating: [Int](repeating: 0, count: n + 1), count: m + 1)
-        
-        for i in 0...m {
-            matrix[i][0] = i
-        }
-        
-        for j in 0...n {
-            matrix[0][j] = j
-        }
-        
+        var previousRow = Array(0...n)
+        var currentRow = [Int](repeating: 0, count: n + 1)
+
         for i in 1...m {
+            currentRow[0] = i
+
             for j in 1...n {
                 let cost = s1Array[i - 1] == s2Array[j - 1] ? 0 : 1
-                matrix[i][j] = min(
-                    matrix[i - 1][j] + 1,      // deletion
-                    matrix[i][j - 1] + 1,      // insertion
-                    matrix[i - 1][j - 1] + cost // substitution
+                currentRow[j] = min(
+                    previousRow[j] + 1,
+                    currentRow[j - 1] + 1,
+                    previousRow[j - 1] + cost
                 )
             }
+
+            swap(&previousRow, &currentRow)
         }
         
-        return matrix[m][n]
+        return previousRow[n]
     }
     
     /// Generates phonetic variants for text (for handling speech recognition variations)

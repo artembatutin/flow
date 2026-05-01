@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import AppKit
 
 /// Adapter for IDEs (VS Code, Windsurf, Xcode, JetBrains, etc.)
 final class IDEAdapter: TargetAdapter {
@@ -53,18 +52,10 @@ final class IDEAdapter: TargetAdapter {
     
     // MARK: - Configuration
     
-    /// Whether to preserve indentation when pasting
-    var preserveIndentation: Bool = true
-    
     /// Whether to add a trailing newline for code blocks
     var addTrailingNewline: Bool = false
     
     // MARK: - TargetAdapter Methods
-    
-    func inject(text: String, using injector: TextInjector) async throws -> InjectionResult {
-        let preparedText = prepareText(text)
-        return try await injector.inject(text: preparedText, mode: preferredMode)
-    }
     
     func prepareText(_ text: String) -> String {
         var result = text
@@ -77,27 +68,4 @@ final class IDEAdapter: TargetAdapter {
         return result
     }
     
-    // MARK: - IDE-Specific Methods
-    
-    /// Checks if the IDE is a VS Code variant
-    func isVSCodeVariant(bundleId: String) -> Bool {
-        let vsCodeVariants = [
-            "com.microsoft.VSCode",
-            "com.microsoft.VSCodeInsiders",
-            "com.visualstudio.code.oss",
-            "com.todesktop.230313mzl4w4u92",
-            "com.cursor.Cursor"
-        ]
-        return vsCodeVariants.contains(bundleId)
-    }
-    
-    /// Checks if the IDE is Xcode
-    func isXcode(bundleId: String) -> Bool {
-        bundleId == "com.apple.dt.Xcode"
-    }
-    
-    /// Checks if the IDE is a JetBrains product
-    func isJetBrains(bundleId: String) -> Bool {
-        bundleId.hasPrefix("com.jetbrains.")
-    }
 }

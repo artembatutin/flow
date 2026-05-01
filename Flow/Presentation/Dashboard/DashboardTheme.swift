@@ -25,7 +25,6 @@ enum DashboardPalette {
     static let surface = Color(nsColor: .controlBackgroundColor)
     static let surfaceSecondary = Color(nsColor: .textBackgroundColor)
     static let surfaceTertiary = Color(nsColor: .unemphasizedSelectedTextBackgroundColor)
-    static let border = Color(nsColor: .separatorColor).opacity(0.62)
     static let outlineSoft = Color(nsColor: .separatorColor).opacity(0.34)
     static let gridLine = Color(nsColor: .separatorColor).opacity(0.28)
     static let textPrimary = Color(nsColor: .labelColor)
@@ -38,12 +37,6 @@ enum DashboardPalette {
     static let accentGreen = Color(nsColor: .systemGreen)
     static let destructive = Color(nsColor: .systemRed)
     static let shadow = Color.black.opacity(0.05)
-}
-
-struct DashboardPressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-    }
 }
 
 struct DashboardSceneBackground: View {

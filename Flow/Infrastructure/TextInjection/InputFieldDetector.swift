@@ -190,8 +190,11 @@ final class InputFieldDetector: ObservableObject {
             return nil
         }
         
+        guard CFGetTypeID(positionRef) == AXValueGetTypeID() else { return nil }
+        let positionValue = positionRef as! AXValue
+
         var point = CGPoint.zero
-        if AXValueGetValue(positionRef as! AXValue, .cgPoint, &point) {
+        if AXValueGetValue(positionValue, .cgPoint, &point) {
             return point
         }
         return nil
@@ -204,8 +207,11 @@ final class InputFieldDetector: ObservableObject {
             return nil
         }
         
+        guard CFGetTypeID(sizeRef) == AXValueGetTypeID() else { return nil }
+        let sizeValue = sizeRef as! AXValue
+
         var size = CGSize.zero
-        if AXValueGetValue(sizeRef as! AXValue, .cgSize, &size) {
+        if AXValueGetValue(sizeValue, .cgSize, &size) {
             return size
         }
         return nil
@@ -257,7 +263,11 @@ final class InputFieldDetector: ObservableObject {
             return false
         }
         
+        guard CFGetTypeID(focusedElement) == AXUIElementGetTypeID() else {
+            return false
+        }
         let element = focusedElement as! AXUIElement
+
         guard let role = getStringAttribute(element, attribute: kAXRoleAttribute) else {
             return false
         }

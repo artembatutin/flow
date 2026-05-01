@@ -41,6 +41,10 @@ protocol TargetAdapter {
 
 /// Default implementations for TargetAdapter
 extension TargetAdapter {
+    func inject(text: String, using injector: TextInjector) async throws -> InjectionResult {
+        try await injector.inject(text: prepareText(text), mode: preferredMode)
+    }
+
     func canHandle(bundleId: String) -> Bool {
         bundleIdentifiers.contains(bundleId)
     }

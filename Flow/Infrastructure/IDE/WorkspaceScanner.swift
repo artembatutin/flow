@@ -113,7 +113,6 @@ final class WorkspaceScanner: ObservableObject {
     
     private var fileWatcher: DispatchSourceFileSystemObject?
     private var watchedDirectoryFD: Int32 = -1
-    private var cancellables = Set<AnyCancellable>()
     
     /// File extensions to include in scans
     private let includedExtensions: Set<String> = [
@@ -193,13 +192,13 @@ final class WorkspaceScanner: ObservableObject {
         // Try to get workspace root from accessibility
         if let root = await getWorkspaceRootFromAccessibility() {
             workspaceRoot = root
-            workspaceFiles = await scanDirectory(root)
+            workspaceFiles = scanDirectory(root)
             lastScanDate = Date()
         }
     }
     
     /// Scans a directory for workspace files
-    func scanDirectory(_ path: URL) async -> [WorkspaceFile] {
+    func scanDirectory(_ path: URL) -> [WorkspaceFile] {
         var files: [WorkspaceFile] = []
         
         let fileManager = FileManager.default

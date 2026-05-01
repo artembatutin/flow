@@ -12,8 +12,8 @@ actor DictionaryStore {
     private let fileURL: URL
     private var cachedEntries: [DictionaryEntry]?
     
-    init() {
-        self.fileURL = (try? AppSupportPaths.fileURL("dictionary.json")) ??
+    init(fileURL: URL? = nil) {
+        self.fileURL = fileURL ?? (try? AppSupportPaths.fileURL("dictionary.json")) ??
             FileManager.default.temporaryDirectory.appendingPathComponent("dictionary.json")
     }
     

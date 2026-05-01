@@ -20,7 +20,6 @@ class SnippetManager: ObservableObject {
     
     private let store: SnippetStore
     private let placeholderResolver: PlaceholderResolver
-    private var cancellables = Set<AnyCancellable>()
     
     var filteredSnippets: [Snippet] {
         var result = snippets

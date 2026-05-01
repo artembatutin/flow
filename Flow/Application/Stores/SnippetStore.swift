@@ -12,8 +12,8 @@ actor SnippetStore {
     private let fileURL: URL
     private var cachedSnippets: [Snippet]?
     
-    init() {
-        self.fileURL = (try? AppSupportPaths.fileURL("snippets.json")) ??
+    init(fileURL: URL? = nil) {
+        self.fileURL = fileURL ?? (try? AppSupportPaths.fileURL("snippets.json")) ??
             FileManager.default.temporaryDirectory.appendingPathComponent("snippets.json")
     }
     

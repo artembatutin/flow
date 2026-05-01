@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import AppKit
 
 /// Adapter for text editors (Sublime Text, TextEdit, BBEdit, etc.)
 final class TextEditorAdapter: TargetAdapter {
@@ -36,14 +35,7 @@ final class TextEditorAdapter: TargetAdapter {
     
     // MARK: - TargetAdapter Methods
     
-    func inject(text: String, using injector: TextInjector) async throws -> InjectionResult {
-        let preparedText = prepareText(text)
-        return try await injector.inject(text: preparedText, mode: preferredMode)
-    }
-    
     func prepareText(_ text: String) -> String {
-        // Text editors generally handle text as-is
-        // No special preparation needed
-        return text
+        text
     }
 }

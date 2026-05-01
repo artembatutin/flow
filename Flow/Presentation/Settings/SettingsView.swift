@@ -895,33 +895,6 @@ struct OverlaySettingsView: View {
     }
 }
 
-// MARK: - History Settings
-
-struct HistorySettingsView: View {
-    @EnvironmentObject var settingsStore: SettingsStore
-    @EnvironmentObject var sessionManager: SessionManager
-    @EnvironmentObject var textInjectionService: TextInjectionService
-    
-    @State private var selectedTab: Int = 0
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("", selection: $selectedTab) {
-                Text("History").tag(0)
-                Text("Statistics").tag(1)
-            }
-            .pickerStyle(.segmented)
-            .padding()
-            
-            if selectedTab == 0 {
-                HistoryView()
-            } else {
-                StatisticsView()
-            }
-        }
-    }
-}
-
 // MARK: - File Tagging Settings
 
 struct FileTaggingSettingsView: View {

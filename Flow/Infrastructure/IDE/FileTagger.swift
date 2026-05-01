@@ -192,15 +192,3 @@ final class FileTagger: ObservableObject {
         return words.joined(separator: " ")
     }
 }
-
-// MARK: - File Tagging Settings
-
-/// Settings for file tagging feature
-struct FileTaggingSettings: Codable {
-    var isEnabled: Bool = true
-    var autoScanOnFocus: Bool = true
-    var scanOnStartup: Bool = false
-    var minimumMatchScore: Double = 0.5
-    
-    static let `default` = FileTaggingSettings()
-}

@@ -6,30 +6,40 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var settingsStore: SettingsStore
     @EnvironmentObject var hotkeyManager: HotkeyManager
+    @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var taskManager: TaskManager
+    @State private var didCopyLastCapture = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             header
             summaryCard
+            lastCaptureCard
             launcherButtons
             footer
         }
-        .padding(16)
-        .frame(width: 320)
+        .padding(18)
+        .frame(width: 340)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             Image(systemName: appState.recordingState.iconName)
-                .font(.system(size: 26))
+                .font(.system(size: 28))
                 .foregroundStyle(statusColor)
                 .symbolEffect(.pulse, isActive: appState.recordingState == .listening)
+                .frame(width: 42, height: 42)
+                .background(
+                    Circle()
+                        .fill(statusColor.opacity(0.12))
+                )
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(AppBranding.displayName)
@@ -41,11 +51,13 @@ struct MenuBarView: View {
             }
 
             Spacer()
+
+            statusBadge
         }
     }
 
     private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 summaryMetric(title: "Model", value: settingsStore.selectedModel)
                 Spacer()
@@ -57,14 +69,11 @@ struct MenuBarView: View {
             HStack {
                 summaryMetric(title: "Open Tasks", value: "\(openTaskCount)")
                 Spacer()
-                summaryMetric(title: "Last Capture", value: lastCaptureSummary)
+                summaryMetric(title: "Captures", value: "\(sessionManager.sessions.count)")
             }
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
+        .padding(14)
+        .menuPanelBackground()
     }
 
     private func summaryMetric(title: String, value: String) -> some View {
@@ -76,48 +85,109 @@ struct MenuBarView: View {
                 .font(.subheadline.weight(.medium))
                 .lineLimit(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var lastCaptureCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Last Capture")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                Spacer()
+
+                Button {
+                    copyLastCapture()
+                } label: {
+                    Label(didCopyLastCapture ? "Copied" : "Copy", systemImage: didCopyLastCapture ? "checkmark" : "doc.on.doc")
+                        .font(.callout.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(lastCaptureText == nil)
+            }
+
+            Text(lastCaptureText ?? "No captures yet")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(lastCaptureText == nil ? .secondary : .primary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .menuPanelBackground()
     }
 
     private var launcherButtons: some View {
-        VStack(spacing: 8) {
+        HStack(spacing: 10) {
             Button {
                 DashboardWindowController.shared.showWindow()
             } label: {
-                launcherLabel(title: "Open Dashboard", systemImage: "square.grid.2x2")
+                launcherLabel(title: "Dashboard", systemImage: "square.grid.2x2")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            .buttonStyle(.plain)
 
             Button {
                 SettingsWindowController.shared.showWindow()
             } label: {
-                launcherLabel(title: "Open Settings", systemImage: "gearshape")
+                launcherLabel(title: "Settings", systemImage: "gearshape")
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+            .buttonStyle(.plain)
         }
     }
 
     private func launcherLabel(title: String, systemImage: String) -> some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-            Spacer()
+        HStack(spacing: 9) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .frame(width: 22)
+
+            Text(title)
+                .font(.callout.weight(.semibold))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(.primary)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
     }
 
     private var footer: some View {
         HStack {
-            Text("Menu bar launcher")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
             Spacer()
 
             Button("Quit") {
                 NSApp.terminate(nil)
             }
             .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private var statusBadge: some View {
+        Text(statusBadgeText)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(statusColor)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                Capsule()
+                    .fill(statusColor.opacity(0.12))
+            )
+    }
+
+    private var statusBadgeText: String {
+        switch appState.recordingState {
+        case .idle:
+            return "Ready"
+        case .listening, .processing:
+            return "Active"
+        case .error:
+            return "Error"
         }
     }
 
@@ -138,11 +208,38 @@ struct MenuBarView: View {
         taskManager.tasks.filter { $0.status != .done }.count
     }
 
-    private var lastCaptureSummary: String {
-        guard let last = appState.lastTranscription, !last.isEmpty else {
-            return "None"
+    private var lastCaptureText: String? {
+        if let last = appState.lastTranscription?.trimmingCharacters(in: .whitespacesAndNewlines), !last.isEmpty {
+            return last
         }
-        return last.count > 18 ? String(last.prefix(18)) + "…" : last
+
+        if let last = sessionManager.recentSessions.first?.transcription.trimmingCharacters(in: .whitespacesAndNewlines), !last.isEmpty {
+            return last
+        }
+
+        return nil
+    }
+
+    private func copyLastCapture() {
+        guard let text = lastCaptureText else { return }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        didCopyLastCapture = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            didCopyLastCapture = false
+        }
+    }
+}
+
+private extension View {
+    func menuPanelBackground() -> some View {
+        background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
     }
 }
 
@@ -152,5 +249,6 @@ struct MenuBarView: View {
         .environmentObject(AppState())
         .environmentObject(settingsStore)
         .environmentObject(HotkeyManager(settingsStore: settingsStore))
+        .environmentObject(SessionManager(settingsStore: settingsStore))
         .environmentObject(TaskManager())
 }

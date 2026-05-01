@@ -43,7 +43,7 @@ struct TranscriptionOptions {
     var withoutTimestamps: Bool = true
     var wordTimestamps: Bool = false
     
-    static let `default` = TranscriptionOptions()
+    nonisolated static let `default` = TranscriptionOptions()
 }
 
 struct TranscriptionResult {

@@ -105,8 +105,10 @@ struct TranscriptionSession: Identifiable, Codable, Equatable, Hashable {
         modelUsed = try container.decodeIfPresent(String.self, forKey: .modelUsed) ?? "Unknown"
         captureKind = try container.decodeIfPresent(CaptureKind.self, forKey: .captureKind) ?? .dictation
         linkedTaskID = try container.decodeIfPresent(UUID.self, forKey: .linkedTaskID)
-        wordCount = try container.decodeIfPresent(Int.self, forKey: .wordCount) ?? transcription.split(separator: " ").count
-        characterCount = try container.decodeIfPresent(Int.self, forKey: .characterCount) ?? transcription.count
+        let computedWordCount = transcription.split(separator: " ").count
+        let computedCharacterCount = transcription.count
+        wordCount = max(0, try container.decodeIfPresent(Int.self, forKey: .wordCount) ?? computedWordCount)
+        characterCount = max(0, try container.decodeIfPresent(Int.self, forKey: .characterCount) ?? computedCharacterCount)
     }
 }
 

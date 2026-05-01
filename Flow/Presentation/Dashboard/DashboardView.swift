@@ -139,31 +139,11 @@ private struct TasksWorkspaceView: View {
     @State private var showingNewTaskSheet = false
     @State private var showingTaxonomySheet = false
 
-    private var filteredTasks: [TaskItem] {
-        taskManager.filteredTasks()
-    }
-
-    private var filteredCompletedTasks: Int {
-        filteredTasks.filter { $0.status == .done }.count
-    }
-
-    private var filteredHighPriorityTasks: Int {
-        filteredTasks.filter { $0.priority == .high || $0.priority == .urgent }.count
-    }
-
-    private var filteredVoiceTasks: Int {
-        filteredTasks.filter { $0.source == .voiceTask }.count
-    }
-
     var body: some View {
+        let filteredTasks = taskManager.filteredTasks()
+
         ScrollView {
-            VStack(alignment: .leading, spacing: DashboardMetrics.sectionSpacing) {
-                header
-                primaryControlBar
-                secondaryFilterBar
-                taskList
-            }
-            .padding(.bottom, 8)
+            content(filteredTasks: filteredTasks)
         }
         .scrollIndicators(.hidden)
         .sheet(isPresented: $showingNewTaskSheet) {
@@ -180,6 +160,16 @@ private struct TasksWorkspaceView: View {
         .onChange(of: selectedProjectID) { _, _ in
             syncSelection()
         }
+    }
+
+    private func content(filteredTasks: [TaskItem]) -> some View {
+        VStack(alignment: .leading, spacing: DashboardMetrics.sectionSpacing) {
+            header
+            primaryControlBar(filteredTasks: filteredTasks)
+            secondaryFilterBar
+            taskList(filteredTasks: filteredTasks)
+        }
+        .padding(.bottom, 8)
     }
 
     private var header: some View {
@@ -201,8 +191,12 @@ private struct TasksWorkspaceView: View {
         }
     }
 
-    private var primaryControlBar: some View {
-        DashboardToolbar {
+    private func primaryControlBar(filteredTasks: [TaskItem]) -> some View {
+        let completedTasks = filteredTasks.filter { $0.status == .done }.count
+        let highPriorityTasks = filteredTasks.filter { $0.priority == .high || $0.priority == .urgent }.count
+        let voiceTasks = filteredTasks.filter { $0.source == .voiceTask }.count
+
+        return DashboardToolbar {
             HStack(alignment: .bottom, spacing: DashboardMetrics.controlGap) {
                 DashboardInlinePickerField(title: "Scope", width: 180) {
                     Picker("Scope", selection: $selectedProjectID) {
@@ -225,11 +219,11 @@ private struct TasksWorkspaceView: View {
                 HStack(spacing: 8) {
                     DashboardStatBadge(title: "Open", value: "\(filteredTasks.count)", accent: DashboardPalette.accentBlue)
                         .frame(width: 84)
-                    DashboardStatBadge(title: "High", value: "\(filteredHighPriorityTasks)", accent: DashboardPalette.accentRose)
+                    DashboardStatBadge(title: "High", value: "\(highPriorityTasks)", accent: DashboardPalette.accentRose)
                         .frame(width: 84)
-                    DashboardStatBadge(title: "Voice", value: "\(filteredVoiceTasks)", accent: DashboardPalette.accentAmber)
+                    DashboardStatBadge(title: "Voice", value: "\(voiceTasks)", accent: DashboardPalette.accentAmber)
                         .frame(width: 84)
-                    DashboardStatBadge(title: "Done", value: "\(filteredCompletedTasks)", accent: DashboardPalette.accentGreen)
+                    DashboardStatBadge(title: "Done", value: "\(completedTasks)", accent: DashboardPalette.accentGreen)
                         .frame(width: 84)
                 }
                 .frame(width: 360)
@@ -286,7 +280,7 @@ private struct TasksWorkspaceView: View {
         }
     }
 
-    private var taskList: some View {
+    private func taskList(filteredTasks: [TaskItem]) -> some View {
         DashboardSurface(padding: 0, radius: DashboardMetrics.surfaceRadius) {
             VStack(spacing: 0) {
                 taskTableHeader
@@ -301,11 +295,11 @@ private struct TasksWorkspaceView: View {
                         .padding(.vertical, 44)
                 } else {
                     LazyVStack(spacing: 0) {
-                        ForEach(filteredTasks) { task in
-                            TaskTableRow(taskID: task.id)
+                        ForEach(Array(filteredTasks.enumerated()), id: \.element.id) { index, task in
+                            TaskTableRow(task: task)
                                 .environmentObject(taskManager)
 
-                            if task.id != filteredTasks.last?.id {
+                            if index < filteredTasks.index(before: filteredTasks.endIndex) {
                                 Divider()
                                     .padding(.leading, 12)
                             }
@@ -408,76 +402,70 @@ private struct TasksWorkspaceView: View {
 private struct TaskTableRow: View {
     @EnvironmentObject var taskManager: TaskManager
 
-    let taskID: UUID
+    let task: TaskItem
     @State private var showingLabelsPopover = false
 
     var body: some View {
-        if let task = currentTask {
-            HStack(alignment: .top, spacing: 12) {
-                titleColumn(for: task)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .layoutPriority(1)
+        HStack(alignment: .top, spacing: 12) {
+            titleColumn(for: task)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
 
-                inlinePicker(width: 104) {
-                    Picker("", selection: Binding(
-                        get: { task.status },
-                        set: { taskManager.updateTask(id: task.id, status: $0) }
-                    )) {
-                        ForEach(TaskStatus.allCases) { status in
-                            Text(status.displayName).tag(status)
-                        }
+            inlinePicker(width: 104) {
+                Picker("", selection: Binding(
+                    get: { task.status },
+                    set: { taskManager.updateTask(id: task.id, status: $0) }
+                )) {
+                    ForEach(TaskStatus.allCases) { status in
+                        Text(status.displayName).tag(status)
                     }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
                 }
-
-                inlinePicker(width: 104) {
-                    Picker("", selection: Binding(
-                        get: { task.priority },
-                        set: { taskManager.updateTask(id: task.id, priority: $0) }
-                    )) {
-                        ForEach(TaskPriority.allCases) { priority in
-                            Text(priority.displayName).tag(priority)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                }
-
-                inlinePicker(width: 132) {
-                    Picker("", selection: Binding(
-                        get: { task.projectID },
-                        set: { taskManager.setTaskProject(id: task.id, projectID: $0) }
-                    )) {
-                        Text("No Project").tag(Optional<UUID>.none)
-                        ForEach(taskManager.activeProjects) { project in
-                            Text(project.name).tag(Optional(project.id))
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                }
-
-                labelsColumn(for: task)
-                    .frame(width: 150, alignment: .leading)
-
-                Text(relativeDate(task.updatedAt))
-                    .font(.caption2)
-                    .foregroundStyle(DashboardPalette.textSecondary)
-                    .frame(width: 80, alignment: .leading)
-
-                DashboardIconActionButton(systemName: "trash", role: .destructive) {
-                    taskManager.deleteTask(task)
-                }
+                .pickerStyle(.menu)
+                .labelsHidden()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .frame(minHeight: 72, alignment: .topLeading)
-        }
-    }
 
-    private var currentTask: TaskItem? {
-        taskManager.tasks.first(where: { $0.id == taskID })
+            inlinePicker(width: 104) {
+                Picker("", selection: Binding(
+                    get: { task.priority },
+                    set: { taskManager.updateTask(id: task.id, priority: $0) }
+                )) {
+                    ForEach(TaskPriority.allCases) { priority in
+                        Text(priority.displayName).tag(priority)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+
+            inlinePicker(width: 132) {
+                Picker("", selection: Binding(
+                    get: { task.projectID },
+                    set: { taskManager.setTaskProject(id: task.id, projectID: $0) }
+                )) {
+                    Text("No Project").tag(Optional<UUID>.none)
+                    ForEach(taskManager.activeProjects) { project in
+                        Text(project.name).tag(Optional(project.id))
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+            }
+
+            labelsColumn(for: task)
+                .frame(width: 150, alignment: .leading)
+
+            Text(relativeDate(task.updatedAt))
+                .font(.caption2)
+                .foregroundStyle(DashboardPalette.textSecondary)
+                .frame(width: 80, alignment: .leading)
+
+            DashboardIconActionButton(systemName: "trash", role: .destructive) {
+                taskManager.deleteTask(task)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(minHeight: 72, alignment: .topLeading)
     }
 
     private func titleColumn(for task: TaskItem) -> some View {

@@ -42,16 +42,6 @@ final class ClaudeCodeAdapter: TargetAdapter {
         "anthropic"
     ]
     
-    /// Whether command mode is enabled (for special Claude commands)
-    var commandModeEnabled: Bool = true
-    
-    /// Command prefixes that trigger special handling
-    private let commandPrefixes: [String] = [
-        "/",
-        "!",
-        "@"
-    ]
-    
     // MARK: - TargetAdapter Methods
     
     func canHandle(bundleId: String) -> Bool {
@@ -70,24 +60,6 @@ final class ClaudeCodeAdapter: TargetAdapter {
             return false
         }
         return canHandle(bundleId: bundleId)
-    }
-    
-    func inject(text: String, using injector: TextInjector) async throws -> InjectionResult {
-        let preparedText = prepareText(text)
-        
-        // Use clipboard paste for Claude Code (most reliable)
-        return try await injector.inject(text: preparedText, mode: .clipboardPaste)
-    }
-    
-    func prepareText(_ text: String) -> String {
-        var result = text
-        
-        // Handle command mode if enabled
-        if commandModeEnabled {
-            result = processCommands(result)
-        }
-        
-        return result
     }
     
     // MARK: - Claude Code Detection
@@ -125,33 +97,4 @@ final class ClaudeCodeAdapter: TargetAdapter {
         return false
     }
     
-    // MARK: - Command Processing
-    
-    /// Processes special commands in the text
-    private func processCommands(_ text: String) -> String {
-        // Check if text starts with a command prefix
-        for prefix in commandPrefixes {
-            if text.hasPrefix(prefix) {
-                // This is a command - pass through as-is
-                return text
-            }
-        }
-        
-        return text
-    }
-    
-    // MARK: - Claude Code Specific Methods
-    
-    /// Sends a command to Claude Code
-    func sendCommand(_ command: String, using injector: TextInjector) async throws -> InjectionResult {
-        let commandText = command.hasPrefix("/") ? command : "/\(command)"
-        return try await injector.inject(text: commandText + "\n", mode: .clipboardPaste)
-    }
-    
-    /// Sends a multi-turn message (useful for long prompts)
-    func sendMultilineMessage(_ message: String, using injector: TextInjector) async throws -> InjectionResult {
-        // For multiline messages, we use clipboard paste
-        // Claude Code handles multiline input well
-        return try await injector.inject(text: message, mode: .clipboardPaste)
-    }
 }
