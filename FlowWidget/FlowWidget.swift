@@ -12,16 +12,20 @@ import WidgetKit
 struct FlowTasksEntry: TimelineEntry {
     let date: Date
     let tasks: [TaskItem]
+    let projectNames: [UUID: String]
 }
 
 struct FlowTasksProvider: TimelineProvider {
     func placeholder(in context: Context) -> FlowTasksEntry {
-        FlowTasksEntry(
+        let project = TaskProject(name: "Website")
+
+        return FlowTasksEntry(
             date: Date(),
             tasks: [
-                TaskItem(title: "Review captured tasks", status: .next, priority: .high),
+                TaskItem(title: "Review captured tasks", status: .next, priority: .high, projectID: project.id),
                 TaskItem(title: "Send a follow-up", status: .inProgress, priority: .medium)
-            ]
+            ],
+            projectNames: [project.id: project.name]
         )
     }
 
@@ -34,8 +38,18 @@ struct FlowTasksProvider: TimelineProvider {
     }
 
     private func entry() -> FlowTasksEntry {
-        let tasks = SharedTaskWorkspace.load().tasks.sortedForWidget
-        return FlowTasksEntry(date: Date(), tasks: tasks)
+        let workspace = SharedTaskWorkspace.load()
+        let projectNames = Dictionary(
+            uniqueKeysWithValues: workspace.projects
+                .filter { !$0.isArchived }
+                .map { ($0.id, $0.name) }
+        )
+
+        return FlowTasksEntry(
+            date: Date(),
+            tasks: workspace.tasks.sortedForWidget,
+            projectNames: projectNames
+        )
     }
 }
 
@@ -51,7 +65,7 @@ struct FlowWidget: Widget {
         }
         .configurationDisplayName("Flow Tasks")
         .description("Review tasks from Flow and update them from your desktop.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge])
         .contentMarginsDisabled()
     }
 }
@@ -69,12 +83,22 @@ struct FlowTasksWidgetView: View {
         Array(openTasks.prefix(taskLimit))
     }
 
+    private var isSmall: Bool {
+        family == .systemSmall
+    }
+
+    private var isExtraLarge: Bool {
+        family == .systemExtraLarge
+    }
+
     private var taskLimit: Int {
         switch family {
         case .systemSmall:
             return 2
         case .systemMedium:
             return 3
+        case .systemExtraLarge:
+            return 10
         default:
             return 6
         }
@@ -88,27 +112,37 @@ struct FlowTasksWidgetView: View {
         URL(string: "flow://tasks/new")!
     }
 
+    private func projectName(for task: TaskItem) -> String? {
+        guard let projectID = task.projectID else { return nil }
+        return entry.projectNames[projectID]
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: family == .systemSmall ? 8 : 12) {
+        VStack(alignment: .leading, spacing: isSmall ? 8 : 12) {
             header
 
             if visibleTasks.isEmpty {
                 emptyState
             } else {
-                VStack(spacing: family == .systemSmall ? 6 : 8) {
+                VStack(spacing: isSmall ? 6 : 8) {
                     ForEach(visibleTasks) { task in
-                        FlowWidgetTaskRow(task: task, compact: family == .systemSmall)
+                        FlowWidgetTaskRow(
+                            task: task,
+                            projectName: projectName(for: task),
+                            compact: isSmall,
+                            spacious: isExtraLarge
+                        )
                     }
                 }
             }
 
             Spacer(minLength: 0)
 
-            if family != .systemSmall {
+            if !isSmall {
                 footer
             }
         }
-        .padding(family == .systemSmall ? 12 : 16)
+        .padding(isSmall ? 12 : 16)
         .widgetURL(tasksURL)
     }
 
@@ -191,7 +225,9 @@ struct FlowTasksWidgetView: View {
 
 private struct FlowWidgetTaskRow: View {
     let task: TaskItem
+    let projectName: String?
     let compact: Bool
+    let spacious: Bool
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
@@ -212,10 +248,14 @@ private struct FlowWidgetTaskRow: View {
                 Text(task.title)
                     .font(compact ? .caption.weight(.semibold) : .subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
-                    .lineLimit(compact ? 2 : 1)
+                    .lineLimit(compact || spacious ? 2 : 1)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 6) {
+                    if let projectName {
+                        FlowWidgetBadge(title: projectName, color: .teal)
+                    }
+
                     FlowWidgetBadge(title: task.status.shortName, color: task.status.tintColor)
                     FlowWidgetBadge(title: task.priority.displayName, color: task.priority.tintColor)
                 }
@@ -237,7 +277,7 @@ private struct FlowWidgetTaskRow: View {
             }
         }
         .padding(.horizontal, compact ? 9 : 12)
-        .padding(.vertical, compact ? 8 : 10)
+        .padding(.vertical, spacious ? 11 : compact ? 8 : 10)
         .background(.primary.opacity(0.075), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
