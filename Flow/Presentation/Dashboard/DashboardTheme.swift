@@ -307,7 +307,7 @@ struct DashboardMetaBadge: View {
             .lineLimit(1)
             .truncationMode(.tail)
             .background(tint.opacity(0.12))
-            .clipShape(Capsule(style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: compact ? 5 : 6, style: .continuous))
     }
 }
 

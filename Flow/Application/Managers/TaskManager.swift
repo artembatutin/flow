@@ -19,7 +19,6 @@ class TaskManager: ObservableObject {
     private let fileManager: FileManager
     private let customWorkspaceFileURL: URL?
     private var workspaceDirectoryMonitor: DispatchSourceFileSystemObject?
-    private var workspaceDirectoryFileDescriptor: CInt = -1
     private var pendingWorkspaceReload: Task<Void, Never>?
 
     private var workspaceFileURL: URL {
@@ -42,7 +41,6 @@ class TaskManager: ObservableObject {
         pendingWorkspaceReload?.cancel()
         workspaceDirectoryMonitor?.cancel()
         workspaceDirectoryMonitor = nil
-        workspaceDirectoryFileDescriptor = -1
     }
 
     var activeProjects: [TaskProject] {
@@ -344,8 +342,6 @@ class TaskManager: ObservableObject {
         let fileDescriptor = open(directoryURL.path, O_EVTONLY)
         guard fileDescriptor >= 0 else { return }
 
-        workspaceDirectoryFileDescriptor = fileDescriptor
-
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fileDescriptor,
             eventMask: [.write, .delete, .rename, .attrib, .extend],
@@ -369,7 +365,6 @@ class TaskManager: ObservableObject {
     private func stopWorkspaceMonitor() {
         workspaceDirectoryMonitor?.cancel()
         workspaceDirectoryMonitor = nil
-        workspaceDirectoryFileDescriptor = -1
     }
 
     private func scheduleWorkspaceReload() {

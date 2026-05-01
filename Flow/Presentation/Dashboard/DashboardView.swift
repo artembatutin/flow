@@ -287,59 +287,49 @@ private struct TasksWorkspaceView: View {
 
     private func taskList(filteredTasks: [TaskItem]) -> some View {
         DashboardSurface(padding: 0, radius: DashboardMetrics.surfaceRadius) {
-            VStack(spacing: 0) {
-                taskTableHeader
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-
-                Divider()
+            VStack(alignment: .leading, spacing: 12) {
+                taskListHeader(filteredTasks: filteredTasks)
+                    .padding(.horizontal, 14)
+                    .padding(.top, 14)
 
                 if filteredTasks.isEmpty {
                     emptyTasksView
                         .padding(.horizontal, 24)
                         .padding(.vertical, 44)
                 } else {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(filteredTasks.enumerated()), id: \.element.id) { index, task in
+                    LazyVStack(spacing: 10) {
+                        ForEach(filteredTasks) { task in
                             TaskTableRow(task: task)
                                 .environmentObject(taskManager)
-
-                            if index < filteredTasks.index(before: filteredTasks.endIndex) {
-                                Divider()
-                                    .padding(.leading, 12)
-                            }
                         }
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 12)
                 }
             }
         }
     }
 
-    private var taskTableHeader: some View {
-        HStack(spacing: 12) {
-            Text("Title")
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private func taskListHeader(filteredTasks: [TaskItem]) -> some View {
+        HStack(spacing: 8) {
+            Text("Task Queue")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(DashboardPalette.textPrimary)
 
-            Text("Status")
-                .frame(width: 104, alignment: .leading)
+            DashboardMetaBadge(
+                text: "\(filteredTasks.count) matching",
+                tint: DashboardPalette.textSecondary,
+                compact: true
+            )
 
-            Text("Priority")
-                .frame(width: 104, alignment: .leading)
+            Spacer(minLength: 0)
 
-            Text("Project")
-                .frame(width: 132, alignment: .leading)
-
-            Text("Labels")
-                .frame(width: 150, alignment: .leading)
-
-            Text("Updated")
-                .frame(width: 80, alignment: .leading)
-
-            Text("")
-                .frame(width: DashboardMetrics.minHitArea)
+            DashboardMetaBadge(
+                text: "\(filteredTasks.filter { $0.status != .done }.count) open",
+                tint: DashboardPalette.accentBlue,
+                compact: true
+            )
         }
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(DashboardPalette.textSecondary)
     }
 
     private var emptyTasksView: some View {
@@ -415,116 +405,200 @@ private struct TaskTableRow: View {
 
     let task: TaskItem
     @State private var showingLabelsPopover = false
+    @State private var isHovering = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            titleColumn(for: task)
+        HStack(alignment: .center, spacing: 12) {
+            statusToggleButton(for: task)
+
+            VStack(alignment: .leading, spacing: 7) {
+                titleField(for: task)
+                metadataRow(for: task)
+                noteField(for: task)
+            }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
 
-            inlinePicker(width: 104) {
-                Picker("", selection: Binding(
-                    get: { task.status },
-                    set: { taskManager.updateTask(id: task.id, status: $0) }
-                )) {
-                    ForEach(TaskStatus.allCases) { status in
-                        Text(status.displayName).tag(status)
-                    }
+            if task.status == .todo {
+                Button {
+                    taskManager.updateTask(id: task.id, status: .inProgress)
+                } label: {
+                    Text("Start")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(DashboardPalette.accentBlue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(
+                            DashboardPalette.accentBlue.opacity(0.14),
+                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        )
                 }
-                .pickerStyle(.menu)
-                .labelsHidden()
+                .buttonStyle(.plain)
             }
-
-            inlinePicker(width: 104) {
-                Picker("", selection: Binding(
-                    get: { task.priority },
-                    set: { taskManager.updateTask(id: task.id, priority: $0) }
-                )) {
-                    ForEach(TaskPriority.allCases) { priority in
-                        Text(priority.displayName).tag(priority)
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
-
-            inlinePicker(width: 132) {
-                Picker("", selection: Binding(
-                    get: { task.projectID },
-                    set: { taskManager.setTaskProject(id: task.id, projectID: $0) }
-                )) {
-                    Text("No Project").tag(Optional<UUID>.none)
-                    ForEach(taskManager.activeProjects) { project in
-                        Text(project.name).tag(Optional(project.id))
-                    }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
-
-            labelsColumn(for: task)
-                .frame(width: 150, alignment: .leading)
-
-            Text(relativeDate(task.updatedAt))
-                .font(.caption2)
-                .foregroundStyle(DashboardPalette.textSecondary)
-                .frame(width: 80, alignment: .leading)
 
             DashboardIconActionButton(systemName: "trash", role: .destructive) {
                 taskManager.deleteTask(task)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(minHeight: 72, alignment: .topLeading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(minHeight: 86, alignment: .center)
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(rowBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(task.priority.tintColor.opacity(isHovering ? 0.20 : 0.08), lineWidth: 1)
+                )
+        }
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(task.priority.tintColor)
+                .frame(width: 3)
+                .padding(.vertical, 12)
+        }
+        .onHover { hovering in
+            isHovering = hovering
+        }
     }
 
-    private func titleColumn(for task: TaskItem) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            TextField(
-                "Task title",
-                text: Binding(
-                    get: { task.title },
-                    set: { taskManager.updateTask(id: task.id, title: $0) }
-                ),
-                axis: .vertical
-            )
-            .textFieldStyle(.plain)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(DashboardPalette.textPrimary)
-            .lineLimit(3)
-            .multilineTextAlignment(.leading)
-            .help(task.title)
+    private var rowBackground: Color {
+        if isHovering {
+            return DashboardPalette.surfaceTertiary.opacity(0.24)
+        }
+        return DashboardPalette.surfaceSecondary.opacity(0.92)
+    }
 
-            HStack(spacing: 6) {
-                TextField(
-                    "Add note",
-                    text: Binding(
-                        get: { task.notes ?? "" },
-                        set: { taskManager.updateTask(id: task.id, notes: $0) }
-                    ),
-                    axis: .vertical
-                )
-                .textFieldStyle(.plain)
-                .font(.caption2)
-                .foregroundStyle(DashboardPalette.textSecondary)
-                .lineLimit(2)
+    private func statusToggleButton(for task: TaskItem) -> some View {
+        Button {
+            taskManager.updateTask(id: task.id, status: nextStatus(after: task.status))
+        } label: {
+            ZStack {
+                Circle()
+                    .stroke(task.priority.tintColor, lineWidth: 2)
+                    .frame(width: 20, height: 20)
 
-                if task.source == .voiceTask {
-                    DashboardMetaBadge(text: "Voice", tint: DashboardPalette.accentAmber, compact: true)
+                if task.status == .done {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(task.priority.tintColor)
+                } else {
+                    Circle()
+                        .fill(task.priority.tintColor.opacity(0.14))
+                        .frame(width: 10, height: 10)
                 }
             }
         }
+        .buttonStyle(.plain)
+        .help("Change status")
     }
 
-    private func inlinePicker<Content: View>(width: CGFloat, @ViewBuilder content: () -> Content) -> some View {
-        DashboardControlSurface {
-            content()
+    private func titleField(for task: TaskItem) -> some View {
+        TextField(
+            "Task title",
+            text: Binding(
+                get: { task.title },
+                set: { taskManager.updateTask(id: task.id, title: $0) }
+            ),
+            axis: .vertical
+        )
+        .textFieldStyle(.plain)
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(DashboardPalette.textPrimary)
+        .lineLimit(2)
+        .multilineTextAlignment(.leading)
+        .help(task.title)
+    }
+
+    private func metadataRow(for task: TaskItem) -> some View {
+        HStack(spacing: 6) {
+            projectMenu(for: task)
+            statusMenu(for: task)
+            priorityMenu(for: task)
+            labelsControl(for: task)
+
+            if task.source == .voiceTask {
+                DashboardMetaBadge(text: "Voice", tint: DashboardPalette.accentAmber, compact: true)
+            }
+
+            DashboardMetaBadge(text: relativeDate(task.updatedAt), tint: DashboardPalette.textSecondary, compact: true)
         }
-        .frame(width: width)
+        .lineLimit(1)
     }
 
-    private func labelsColumn(for task: TaskItem) -> some View {
+    private func noteField(for task: TaskItem) -> some View {
+        TextField(
+            "Add note",
+            text: Binding(
+                get: { task.notes ?? "" },
+                set: { taskManager.updateTask(id: task.id, notes: $0) }
+            ),
+            axis: .vertical
+        )
+        .textFieldStyle(.plain)
+        .font(.caption2)
+        .foregroundStyle(DashboardPalette.textSecondary)
+        .lineLimit(2)
+    }
+
+    private func statusMenu(for task: TaskItem) -> some View {
+        Menu {
+            ForEach(TaskStatus.allCases) { status in
+                Button {
+                    taskManager.updateTask(id: task.id, status: status)
+                } label: {
+                    Label(status.displayName, systemImage: status == task.status ? "checkmark" : "circle")
+                }
+            }
+        } label: {
+            DashboardEditableTaskBadge(title: task.status.shortName, tint: task.status.tintColor)
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    private func priorityMenu(for task: TaskItem) -> some View {
+        Menu {
+            ForEach(TaskPriority.allCases) { priority in
+                Button {
+                    taskManager.updateTask(id: task.id, priority: priority)
+                } label: {
+                    Label(priority.displayName, systemImage: priority == task.priority ? "checkmark" : "circle")
+                }
+            }
+        } label: {
+            DashboardEditableTaskBadge(title: task.priority.displayName, tint: task.priority.tintColor)
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    private func projectMenu(for task: TaskItem) -> some View {
+        let projectName = task.projectID.flatMap(taskManager.projectName(for:)) ?? "No Project"
+
+        return Menu {
+            Button {
+                taskManager.setTaskProject(id: task.id, projectID: nil)
+            } label: {
+                Label("No Project", systemImage: task.projectID == nil ? "checkmark" : "circle")
+            }
+
+            ForEach(taskManager.activeProjects) { project in
+                Button {
+                    taskManager.setTaskProject(id: task.id, projectID: project.id)
+                } label: {
+                    Label(project.name, systemImage: project.id == task.projectID ? "checkmark" : "circle")
+                }
+            }
+        } label: {
+            DashboardEditableTaskBadge(
+                title: projectName,
+                tint: task.projectID == nil ? DashboardPalette.textSecondary : DashboardPalette.accentCyan,
+                maxWidth: 130
+            )
+        }
+        .menuStyle(.borderlessButton)
+    }
+
+    private func labelsControl(for task: TaskItem) -> some View {
         let labels = task.labelIDs.compactMap(taskManager.label(for:))
         let visibleLabels = Array(labels.prefix(2))
         let remainingCount = max(0, labels.count - visibleLabels.count)
@@ -532,30 +606,18 @@ private struct TaskTableRow: View {
         return Button {
             showingLabelsPopover = true
         } label: {
-            DashboardControlSurface(padding: 10) {
-                HStack(spacing: 6) {
-                    if visibleLabels.isEmpty {
-                        Text("No labels")
-                            .font(.caption2)
-                            .foregroundStyle(DashboardPalette.textSecondary)
-                    } else {
-                        HStack(spacing: 4) {
-                            ForEach(visibleLabels) { label in
-                                DashboardMetaBadge(text: label.name, tint: label.colorToken.color, compact: true)
-                            }
-
-                            if remainingCount > 0 {
-                                DashboardMetaBadge(text: "+\(remainingCount)", tint: DashboardPalette.textSecondary, compact: true)
-                            }
-                        }
-                        .lineLimit(1)
+            HStack(spacing: 4) {
+                if visibleLabels.isEmpty {
+                    DashboardEditableTaskBadge(title: "No Labels", tint: DashboardPalette.textSecondary)
+                } else {
+                    ForEach(visibleLabels) { label in
+                        DashboardMetaBadge(text: label.name, tint: label.colorToken.color, compact: true)
+                            .frame(maxWidth: 92)
                     }
 
-                    Spacer(minLength: 4)
-
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2)
-                        .foregroundStyle(DashboardPalette.textMuted)
+                    if remainingCount > 0 {
+                        DashboardMetaBadge(text: "+\(remainingCount)", tint: DashboardPalette.textSecondary, compact: true)
+                    }
                 }
             }
         }
@@ -585,6 +647,17 @@ private struct TaskTableRow: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    private func nextStatus(after status: TaskStatus) -> TaskStatus {
+        switch status {
+        case .todo:
+            return .inProgress
+        case .inProgress:
+            return .done
+        case .done:
+            return .todo
+        }
     }
 }
 
@@ -641,6 +714,37 @@ private struct TaskLabelSelectionPopover: View {
         }
         .padding(12)
         .frame(width: 220)
+    }
+}
+
+private struct DashboardEditableTaskBadge: View {
+    let title: String
+    let tint: Color
+    let maxWidth: CGFloat?
+
+    init(title: String, tint: Color, maxWidth: CGFloat? = nil) {
+        self.title = title
+        self.tint = tint
+        self.maxWidth = maxWidth
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: maxWidth, alignment: .leading)
+
+            Image(systemName: "chevron.down")
+                .font(.system(size: 7, weight: .bold))
+                .opacity(0.72)
+        }
+        .foregroundStyle(tint)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
     }
 }
 
