@@ -14,12 +14,22 @@ enum SharedTaskWorkspace {
 
     nonisolated static func fileURL(fileManager: FileManager = .default) throws -> URL {
         if let sharedContainer = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            let directory = sharedContainer.appendingPathComponent("Tasks", isDirectory: true)
-            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-
-            let sharedFile = directory.appendingPathComponent(fileName)
+            let sharedFile = sharedFileURL(in: sharedContainer)
+            try fileManager.createDirectory(
+                at: sharedFile.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             try reconcileLegacyWorkspaceIfNeeded(with: sharedFile, fileManager: fileManager)
             return sharedFile
+        }
+
+        if let groupContainersFile = fallbackGroupContainersFileURL(fileManager: fileManager),
+           fileManager.fileExists(atPath: groupContainersFile.path) {
+            try fileManager.createDirectory(
+                at: groupContainersFile.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            return groupContainersFile
         }
 
         return try legacyFileURL(fileManager: fileManager)
@@ -69,6 +79,36 @@ enum SharedTaskWorkspace {
     private nonisolated static func readWorkspace(at url: URL) -> TaskWorkspaceStore? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(TaskWorkspaceStore.self, from: data)
+    }
+
+    private nonisolated static func sharedFileURL(in sharedContainer: URL) -> URL {
+        sharedContainer
+            .appendingPathComponent("Tasks", isDirectory: true)
+            .appendingPathComponent(fileName)
+    }
+
+    private nonisolated static func fallbackGroupContainersFileURL(fileManager: FileManager) -> URL? {
+        let homeDirectory = unsandboxedHomeDirectory(from: fileManager.homeDirectoryForCurrentUser)
+        return homeDirectory?
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Group Containers", isDirectory: true)
+            .appendingPathComponent(appGroupIdentifier, isDirectory: true)
+            .appendingPathComponent("Tasks", isDirectory: true)
+            .appendingPathComponent(fileName)
+    }
+
+    private nonisolated static func unsandboxedHomeDirectory(from homeDirectory: URL) -> URL? {
+        let standardized = homeDirectory.standardizedFileURL
+        let components = standardized.pathComponents
+
+        if let libraryIndex = components.firstIndex(of: "Library"),
+           components.indices.contains(libraryIndex + 3),
+           components[libraryIndex + 1] == "Containers",
+           components[libraryIndex + 3] == "Data" {
+            return URL(fileURLWithPath: components.prefix(libraryIndex).joined(separator: "/"), isDirectory: true)
+        }
+
+        return standardized
     }
 
     private nonisolated static func writeWorkspace(

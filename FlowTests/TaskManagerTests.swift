@@ -63,6 +63,48 @@ final class TaskManagerTests: XCTestCase {
         XCTAssertEqual(filtered.first?.title, "Ship the onboarding update")
     }
 
+    func testCreateTaskReloadsExternallyUpdatedWorkspaceBeforeSaving() throws {
+        let workspaceURL = temporaryURL()
+        let manager = TaskManager(workspaceFileURL: workspaceURL)
+
+        _ = manager.createTask(title: "Existing dashboard task")
+
+        var externalWorkspace = try decodeWorkspace(at: workspaceURL)
+        externalWorkspace.tasks.append(TaskItem(title: "Existing widget task", status: .todo))
+        try encodeWorkspace(externalWorkspace, to: workspaceURL)
+
+        _ = manager.createTask(title: "New dashboard task")
+
+        let reloaded = TaskManager(workspaceFileURL: workspaceURL)
+        XCTAssertEqual(Set(reloaded.tasks.map(\.title)), [
+            "Existing dashboard task",
+            "Existing widget task",
+            "New dashboard task"
+        ])
+    }
+
+    func testTaskManagerObservesExternallyUpdatedWorkspace() async throws {
+        let workspaceURL = temporaryURL()
+        let manager = TaskManager(workspaceFileURL: workspaceURL)
+        let task = manager.createTask(title: "Widget-completable task", status: .todo)
+
+        var externalWorkspace = try decodeWorkspace(at: workspaceURL)
+        let completedAt = Date().addingTimeInterval(5)
+        guard let index = externalWorkspace.tasks.firstIndex(where: { $0.id == task.id }) else {
+            return XCTFail("Expected task to be persisted before external update")
+        }
+        externalWorkspace.tasks[index].status = .done
+        externalWorkspace.tasks[index].updatedAt = completedAt
+        externalWorkspace.tasks[index].completedAt = completedAt
+        try encodeWorkspace(externalWorkspace, to: workspaceURL)
+
+        try await waitUntil {
+            manager.tasks.first(where: { $0.id == task.id })?.status == .done
+        }
+
+        XCTAssertEqual(manager.tasks.first(where: { $0.id == task.id })?.completedAt, completedAt)
+    }
+
     func testLegacyStatusesDecodeAsCurrentStatuses() throws {
         let json = """
         {
@@ -109,9 +151,68 @@ final class TaskManagerTests: XCTestCase {
         XCTAssertEqual(workspace.tasks.map(\.status), [.todo, .todo, .inProgress])
     }
 
+    func testTaskWorkspaceDecodingKeepsValidTasksWhenARecordIsMalformed() throws {
+        let json = """
+        {
+          "schemaVersion": 1,
+          "tasks": [
+            {
+              "id": "\(UUID().uuidString)",
+              "title": "Valid task",
+              "status": "todo",
+              "priority": "medium",
+              "createdAt": 0,
+              "updatedAt": 0
+            },
+            "malformed task"
+          ],
+          "projects": [],
+          "labels": []
+        }
+        """
+
+        let workspace = try JSONDecoder().decode(TaskWorkspaceStore.self, from: Data(json.utf8))
+
+        XCTAssertEqual(workspace.tasks.map(\.title), ["Valid task"])
+        XCTAssertEqual(workspace.tasks.first?.labelIDs, [])
+        XCTAssertEqual(workspace.tasks.first?.source, .manual)
+    }
+
     private func temporaryURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathComponent("task_workspace.json")
+    }
+
+    private func decodeWorkspace(at url: URL) throws -> TaskWorkspaceStore {
+        let data = try Data(contentsOf: url)
+        return try JSONDecoder().decode(TaskWorkspaceStore.self, from: data)
+    }
+
+    private func encodeWorkspace(_ workspace: TaskWorkspaceStore, to url: URL) throws {
+        try FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(workspace)
+        try data.write(to: url, options: .atomic)
+    }
+
+    private func waitUntil(
+        timeout: TimeInterval = 2,
+        condition: @escaping @MainActor () -> Bool
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+
+        while Date() < deadline {
+            if condition() {
+                return
+            }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+
+        XCTFail("Condition was not met within \(timeout) seconds")
     }
 }

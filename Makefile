@@ -20,6 +20,8 @@ build:
 		build
 
 install: build
+	-pkill -x "$(APP_NAME)"
+	-pluginkit -r "$(APPLICATIONS_DIR)/$(APP_NAME).app/Contents/PlugIns/FlowWidget.appex"
 	rm -rf "$(APPLICATIONS_DIR)/$(APP_NAME).app"
 	ditto "$(APP_BUNDLE)" "$(APPLICATIONS_DIR)/$(APP_NAME).app"
 	-pluginkit -r "$(APP_BUNDLE)/Contents/PlugIns/FlowWidget.appex"

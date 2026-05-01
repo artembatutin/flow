@@ -51,7 +51,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task { @MainActor in
             AppDependencies.shared.taskManager.reloadWorkspace()
-            AppDependencies.shared.taskManager.reloadWidgetTimelines()
             DashboardWindowController.shared.showWindow(createNewTask: urls.contains(where: isNewTaskURL))
         }
     }

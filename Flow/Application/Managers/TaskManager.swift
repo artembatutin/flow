@@ -18,6 +18,9 @@ class TaskManager: ObservableObject {
 
     private let fileManager: FileManager
     private let customWorkspaceFileURL: URL?
+    private var workspaceDirectoryMonitor: DispatchSourceFileSystemObject?
+    private var workspaceDirectoryFileDescriptor: CInt = -1
+    private var pendingWorkspaceReload: Task<Void, Never>?
 
     private var workspaceFileURL: URL {
         if let customWorkspaceFileURL {
@@ -32,6 +35,14 @@ class TaskManager: ObservableObject {
         self.fileManager = fileManager
         self.customWorkspaceFileURL = workspaceFileURL
         loadWorkspace()
+        startWorkspaceMonitor()
+    }
+
+    deinit {
+        pendingWorkspaceReload?.cancel()
+        workspaceDirectoryMonitor?.cancel()
+        workspaceDirectoryMonitor = nil
+        workspaceDirectoryFileDescriptor = -1
     }
 
     var activeProjects: [TaskProject] {
@@ -104,6 +115,8 @@ class TaskManager: ObservableObject {
         source: TaskSource = .manual,
         originalTranscript: String? = nil
     ) -> TaskItem {
+        refreshFromStoredWorkspace()
+
         let timestamp = Date()
         let task = TaskItem(
             title: title,
@@ -268,23 +281,30 @@ class TaskManager: ObservableObject {
     }
 
     private func loadWorkspace() {
+        guard let workspace = storedWorkspace() else { return }
+        apply(workspace)
+        reloadWidgetTimelines()
+    }
+
+    private func storedWorkspace() -> TaskWorkspaceStore? {
         if customWorkspaceFileURL == nil {
-            let workspace = SharedTaskWorkspace.load(fileManager: fileManager)
-            apply(workspace)
-            reloadWidgetTimelines()
-            return
+            return SharedTaskWorkspace.load(fileManager: fileManager)
         }
 
-        guard fileManager.fileExists(atPath: workspaceFileURL.path) else { return }
+        guard fileManager.fileExists(atPath: workspaceFileURL.path) else { return nil }
         do {
             let data = try Data(contentsOf: workspaceFileURL)
             let decoder = JSONDecoder()
-            let workspace = try decoder.decode(TaskWorkspaceStore.self, from: data)
-            apply(workspace)
-            reloadWidgetTimelines()
+            return try decoder.decode(TaskWorkspaceStore.self, from: data)
         } catch {
             print("Failed to load task workspace: \(error)")
+            return nil
         }
+    }
+
+    private func refreshFromStoredWorkspace() {
+        guard let workspace = storedWorkspace() else { return }
+        apply(workspace)
     }
 
     private func saveWorkspace() {
@@ -309,9 +329,56 @@ class TaskManager: ObservableObject {
     }
 
     private func apply(_ workspace: TaskWorkspaceStore) {
+        guard workspace != TaskWorkspaceStore(tasks: tasks, projects: projects, labels: labels) else { return }
         tasks = workspace.tasks
         projects = workspace.projects
         labels = workspace.labels
+    }
+
+    private func startWorkspaceMonitor() {
+        stopWorkspaceMonitor()
+
+        let directoryURL = workspaceFileURL.deletingLastPathComponent()
+        try? fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+
+        let fileDescriptor = open(directoryURL.path, O_EVTONLY)
+        guard fileDescriptor >= 0 else { return }
+
+        workspaceDirectoryFileDescriptor = fileDescriptor
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fileDescriptor,
+            eventMask: [.write, .delete, .rename, .attrib, .extend],
+            queue: DispatchQueue.global(qos: .utility)
+        )
+
+        source.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.scheduleWorkspaceReload()
+            }
+        }
+
+        source.setCancelHandler {
+            close(fileDescriptor)
+        }
+
+        workspaceDirectoryMonitor = source
+        source.resume()
+    }
+
+    private func stopWorkspaceMonitor() {
+        workspaceDirectoryMonitor?.cancel()
+        workspaceDirectoryMonitor = nil
+        workspaceDirectoryFileDescriptor = -1
+    }
+
+    private func scheduleWorkspaceReload() {
+        pendingWorkspaceReload?.cancel()
+        pendingWorkspaceReload = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            self?.refreshFromStoredWorkspace()
+        }
     }
 
     private func taskSort(lhs: TaskItem, rhs: TaskItem) -> Bool {

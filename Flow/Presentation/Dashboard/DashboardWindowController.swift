@@ -37,6 +37,8 @@ class DashboardWindowController {
     private init() {}
 
     func showWindow(createNewTask: Bool = false) {
+        let dependencies = AppDependencies.shared
+        dependencies.taskManager.reloadWorkspace()
         navigation.showTasks(createNewTask: createNewTask)
 
         if let existingWindow = window {
@@ -45,7 +47,6 @@ class DashboardWindowController {
             return
         }
 
-        let dependencies = AppDependencies.shared
         let dashboardView = DashboardView()
             .environmentObject(dependencies.taskManager)
             .environmentObject(dependencies.sessionManager)

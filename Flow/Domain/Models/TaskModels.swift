@@ -220,6 +220,21 @@ struct TaskItem: Identifiable, Codable, Equatable, Hashable {
     var completedAt: Date?
     var originalTranscript: String?
 
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case notes
+        case status
+        case priority
+        case projectID
+        case labelIDs
+        case source
+        case createdAt
+        case updatedAt
+        case completedAt
+        case originalTranscript
+    }
+
     init(
         id: UUID = UUID(),
         title: String,
@@ -247,6 +262,26 @@ struct TaskItem: Identifiable, Codable, Equatable, Hashable {
         self.completedAt = completedAt
         self.originalTranscript = originalTranscript
     }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let createdAt = container.decodeSafely(Date.self, forKey: .createdAt) ?? Date()
+        let title = container.decodeSafely(String.self, forKey: .title)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        self.id = container.decodeSafely(UUID.self, forKey: .id) ?? UUID()
+        self.title = title.flatMap { $0.isEmpty ? nil : $0 } ?? "Untitled Task"
+        self.notes = container.decodeSafely(String.self, forKey: .notes)
+        self.status = container.decodeSafely(TaskStatus.self, forKey: .status) ?? .todo
+        self.priority = container.decodeSafely(TaskPriority.self, forKey: .priority) ?? .medium
+        self.projectID = container.decodeSafely(UUID.self, forKey: .projectID)
+        self.labelIDs = container.decodeSafely([UUID].self, forKey: .labelIDs) ?? []
+        self.source = container.decodeSafely(TaskSource.self, forKey: .source) ?? .manual
+        self.createdAt = createdAt
+        self.updatedAt = container.decodeSafely(Date.self, forKey: .updatedAt) ?? createdAt
+        self.completedAt = container.decodeSafely(Date.self, forKey: .completedAt)
+        self.originalTranscript = container.decodeSafely(String.self, forKey: .originalTranscript)
+    }
 }
 
 struct TaskWorkspaceStore: Codable, Equatable {
@@ -254,6 +289,105 @@ struct TaskWorkspaceStore: Codable, Equatable {
     var tasks: [TaskItem] = []
     var projects: [TaskProject] = []
     var labels: [TaskLabel] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case tasks
+        case projects
+        case labels
+    }
+
+    init(
+        schemaVersion: Int = 1,
+        tasks: [TaskItem] = [],
+        projects: [TaskProject] = [],
+        labels: [TaskLabel] = []
+    ) {
+        self.schemaVersion = schemaVersion
+        self.tasks = tasks
+        self.projects = projects
+        self.labels = labels
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = container.decodeSafely(Int.self, forKey: .schemaVersion) ?? 1
+        tasks = container.decodeLossyArray(TaskItem.self, forKey: .tasks)
+        projects = container.decodeLossyArray(TaskProject.self, forKey: .projects)
+        labels = container.decodeLossyArray(TaskLabel.self, forKey: .labels)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(tasks, forKey: .tasks)
+        try container.encode(projects, forKey: .projects)
+        try container.encode(labels, forKey: .labels)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeSafely<Value: Decodable>(_ type: Value.Type, forKey key: Key) -> Value? {
+        try? decodeIfPresent(type, forKey: key)
+    }
+
+    func decodeLossyArray<Value: Decodable>(_ type: Value.Type, forKey key: Key) -> [Value] {
+        guard let values = try? decodeIfPresent(LossyDecodableArray<Value>.self, forKey: key) else {
+            return []
+        }
+        return values.elements
+    }
+}
+
+private struct LossyDecodableArray<Element: Decodable>: Decodable {
+    var elements: [Element] = []
+
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+
+        while !container.isAtEnd {
+            if let element = try? container.decode(Element.self) {
+                elements.append(element)
+            } else {
+                _ = try? container.decode(DiscardedDecodableValue.self)
+            }
+        }
+    }
+}
+
+private struct DiscardedDecodableValue: Decodable {
+    init(from decoder: Decoder) throws {
+        if var unkeyedContainer = try? decoder.unkeyedContainer() {
+            while !unkeyedContainer.isAtEnd {
+                _ = try? unkeyedContainer.decode(DiscardedDecodableValue.self)
+            }
+            return
+        }
+
+        if let keyedContainer = try? decoder.container(keyedBy: DynamicCodingKey.self) {
+            for key in keyedContainer.allKeys {
+                _ = try? keyedContainer.decode(DiscardedDecodableValue.self, forKey: key)
+            }
+            return
+        }
+
+        _ = try? decoder.singleValueContainer()
+    }
+}
+
+private struct DynamicCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        intValue = nil
+    }
+
+    init?(intValue: Int) {
+        stringValue = "\(intValue)"
+        self.intValue = intValue
+    }
 }
 
 struct TaskFilterState: Equatable {
