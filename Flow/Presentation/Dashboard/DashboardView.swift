@@ -408,37 +408,35 @@ private struct TaskTableRow: View {
     @State private var isHovering = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             statusToggleButton(for: task)
+                .padding(.top, 21)
 
-            VStack(alignment: .leading, spacing: 7) {
+            VStack(alignment: .leading, spacing: 8) {
                 titleField(for: task)
                 metadataRow(for: task)
                 noteField(for: task)
             }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .layoutPriority(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
-            if task.status == .todo {
-                Button {
-                    taskManager.updateTask(id: task.id, status: .inProgress)
-                } label: {
-                    Text("Start")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(DashboardPalette.accentBlue)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(
-                            DashboardPalette.accentBlue.opacity(0.14),
-                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        )
+            VStack(alignment: .trailing, spacing: 12) {
+                DashboardMetaBadge(text: relativeDate(task.updatedAt), tint: DashboardPalette.textSecondary, compact: true)
+                    .frame(width: 86, alignment: .trailing)
+
+                Spacer(minLength: 2)
+
+                if task.status == .todo {
+                    startButton(for: task)
                 }
-                .buttonStyle(.plain)
             }
+            .frame(width: 92, alignment: .topTrailing)
+            .frame(minHeight: 62, alignment: .topTrailing)
 
             DashboardIconActionButton(systemName: "trash", role: .destructive) {
                 taskManager.deleteTask(task)
             }
+            .padding(.top, 11)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -520,10 +518,25 @@ private struct TaskTableRow: View {
             if task.source == .voiceTask {
                 DashboardMetaBadge(text: "Voice", tint: DashboardPalette.accentAmber, compact: true)
             }
-
-            DashboardMetaBadge(text: relativeDate(task.updatedAt), tint: DashboardPalette.textSecondary, compact: true)
         }
         .lineLimit(1)
+    }
+
+    private func startButton(for task: TaskItem) -> some View {
+        Button {
+            taskManager.updateTask(id: task.id, status: .inProgress)
+        } label: {
+            Text("Start")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(DashboardPalette.accentBlue)
+                .frame(width: 46, height: 24)
+                .background(
+                    DashboardPalette.accentBlue.opacity(0.14),
+                    in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                )
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
     }
 
     private func noteField(for task: TaskItem) -> some View {
@@ -553,7 +566,8 @@ private struct TaskTableRow: View {
         } label: {
             DashboardEditableTaskBadge(title: task.status.shortName, tint: task.status.tintColor)
         }
-        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .fixedSize()
     }
 
     private func priorityMenu(for task: TaskItem) -> some View {
@@ -568,7 +582,8 @@ private struct TaskTableRow: View {
         } label: {
             DashboardEditableTaskBadge(title: task.priority.displayName, tint: task.priority.tintColor)
         }
-        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .fixedSize()
     }
 
     private func projectMenu(for task: TaskItem) -> some View {
@@ -595,7 +610,8 @@ private struct TaskTableRow: View {
                 maxWidth: 130
             )
         }
-        .menuStyle(.borderlessButton)
+        .buttonStyle(.plain)
+        .fixedSize()
     }
 
     private func labelsControl(for task: TaskItem) -> some View {
@@ -622,6 +638,7 @@ private struct TaskTableRow: View {
             }
         }
         .buttonStyle(.plain)
+        .fixedSize()
         .popover(isPresented: $showingLabelsPopover, arrowEdge: .top) {
             TaskLabelSelectionPopover(
                 labels: taskManager.activeLabels,
