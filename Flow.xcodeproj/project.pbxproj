@@ -14,6 +14,7 @@
 		0F2000050000000000000005 /* TranscriptionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1000050000000000000005 /* TranscriptionSession.swift */; };
 		0F2000060000000000000006 /* UsageMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1000060000000000000006 /* UsageMetrics.swift */; };
 		0F2000070000000000000007 /* TaskCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1000070000000000000007 /* TaskCaptureService.swift */; };
+		0F2000080000000000000008 /* TranscriptionSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1000080000000000000008 /* TranscriptionSanitizer.swift */; };
 		1D3E71DE1921EF339B502FDA /* TaskCaptureServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06177123F5F32E8B1148C7AF /* TaskCaptureServiceTests.swift */; };
 		3C7B7DE80AC4ACC8CA7B3406 /* TranscriptionAndAnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A66511822B81CD1C02203B /* TranscriptionAndAnalyticsTests.swift */; };
 		449482D25830F67E8BD5F3CD /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C5764133FE552ED5D6D66AC3 /* XCTest.framework */; };
@@ -38,6 +39,7 @@
 		0F1000050000000000000005 /* TranscriptionSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flow/Domain/Models/TranscriptionSession.swift; sourceTree = "<group>"; };
 		0F1000060000000000000006 /* UsageMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flow/Domain/Models/UsageMetrics.swift; sourceTree = "<group>"; };
 		0F1000070000000000000007 /* TaskCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flow/Domain/Services/TaskCaptureService.swift; sourceTree = "<group>"; };
+		0F1000080000000000000008 /* TranscriptionSanitizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flow/Infrastructure/Speech/TranscriptionSanitizer.swift; sourceTree = "<group>"; };
 		06177123F5F32E8B1148C7AF /* TaskCaptureServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaskCaptureServiceTests.swift; path = FlowTests/TaskCaptureServiceTests.swift; sourceTree = "<group>"; };
 		3958524BB66BF9F15095DD9E /* TaskManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TaskManagerTests.swift; path = FlowTests/TaskManagerTests.swift; sourceTree = "<group>"; };
 		4F5702010000000000000001 /* FlowWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowWidget/FlowWidget.swift; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 				0F1000050000000000000005 /* TranscriptionSession.swift */,
 				0F1000060000000000000006 /* UsageMetrics.swift */,
 				0F1000070000000000000007 /* TaskCaptureService.swift */,
+				0F1000080000000000000008 /* TranscriptionSanitizer.swift */,
 				06177123F5F32E8B1148C7AF /* TaskCaptureServiceTests.swift */,
 				3958524BB66BF9F15095DD9E /* TaskManagerTests.swift */,
 				A9A66511822B81CD1C02203B /* TranscriptionAndAnalyticsTests.swift */,
@@ -344,6 +347,7 @@
 				0F2000050000000000000005 /* TranscriptionSession.swift in Sources */,
 				0F2000060000000000000006 /* UsageMetrics.swift in Sources */,
 				0F2000070000000000000007 /* TaskCaptureService.swift in Sources */,
+				0F2000080000000000000008 /* TranscriptionSanitizer.swift in Sources */,
 				1D3E71DE1921EF339B502FDA /* TaskCaptureServiceTests.swift in Sources */,
 				EFA2DD55BA1485D198950709 /* TaskManagerTests.swift in Sources */,
 				3C7B7DE80AC4ACC8CA7B3406 /* TranscriptionAndAnalyticsTests.swift in Sources */,

@@ -9,7 +9,7 @@ import Foundation
 
 enum TranscriptionSanitizer {
     private static let artifactRegex = try! NSRegularExpression(
-        pattern: #"\[\s*(?:BLANK_AUDIO|LAUGH|BREATH)\s*\]"#,
+        pattern: #"\[\s*(?:BLANK(?:[_ -]+AUDIO)?|SILENCE|LAUGH(?:TER)?|BREATH(?:ING)?|COUGH(?:ING)?|SNEEZE|SNIFF(?:LE|ING)?|SIGH|GASP|APPLAUSE|MUSIC|NOISE|BACKGROUND(?:[_ -]+NOISE|[_ -]+SOUNDS?)|CLEAR(?:ING)?[_ -]+THROAT|THROAT[_ -]+CLEARING|INAUDIBLE|UNINTELLIGIBLE)\s*\]"#,
         options: [.caseInsensitive]
     )
     private static let punctuationSpacingRegex = try! NSRegularExpression(

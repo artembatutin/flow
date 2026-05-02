@@ -2,6 +2,24 @@ import XCTest
 
 @MainActor
 final class TranscriptionAndAnalyticsTests: XCTestCase {
+    func testTranscriptionSanitizerRemovesBracketedNonSpeechArtifacts() {
+        XCTAssertEqual(
+            TranscriptionSanitizer.sanitize("hello [ silence ] world [ laugh ]"),
+            "hello world"
+        )
+        XCTAssertEqual(
+            TranscriptionSanitizer.sanitize("[ background noise ] [ cough ]"),
+            ""
+        )
+    }
+
+    func testTranscriptionSanitizerPreservesNormalBracketedText() {
+        XCTAssertEqual(
+            TranscriptionSanitizer.sanitize("please keep [TODO] in the draft"),
+            "please keep [TODO] in the draft"
+        )
+    }
+
     func testLegacyAndTypedTranscriptionSessionsDecode() throws {
         let json = """
         [
