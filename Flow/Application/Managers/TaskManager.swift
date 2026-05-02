@@ -56,7 +56,7 @@ class TaskManager: ObservableObject {
     }
 
     var sortedTasks: [TaskItem] {
-        tasks.sorted(by: taskSort)
+        tasks.sortedForDisplay
     }
 
     func filteredTasks(using filter: TaskFilterState? = nil) -> [TaskItem] {
@@ -91,7 +91,7 @@ class TaskManager: ObservableObject {
                 ].joined(separator: " ")
                 return haystack.contains(trimmedSearch)
             }
-            .sorted(by: taskSort)
+            .sortedForDisplay
     }
 
     func reloadWorkspace() {
@@ -374,19 +374,6 @@ class TaskManager: ObservableObject {
             guard !Task.isCancelled else { return }
             self?.refreshFromStoredWorkspace()
         }
-    }
-
-    private func taskSort(lhs: TaskItem, rhs: TaskItem) -> Bool {
-        if lhs.status == .done, rhs.status != .done {
-            return false
-        }
-        if lhs.status != .done, rhs.status == .done {
-            return true
-        }
-        if lhs.priority.sortRank != rhs.priority.sortRank {
-            return lhs.priority.sortRank > rhs.priority.sortRank
-        }
-        return lhs.updatedAt > rhs.updatedAt
     }
 }
 

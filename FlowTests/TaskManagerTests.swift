@@ -178,6 +178,57 @@ final class TaskManagerTests: XCTestCase {
         XCTAssertEqual(workspace.tasks.first?.source, .manual)
     }
 
+    func testTaskOrderingKeepsOpenHigherPriorityTasksFirst() {
+        let now = Date()
+        let tasks = [
+            TaskItem(
+                title: "Done urgent",
+                status: .done,
+                priority: .urgent,
+                createdAt: now,
+                updatedAt: now.addingTimeInterval(30)
+            ),
+            TaskItem(
+                title: "Todo high recent",
+                status: .todo,
+                priority: .high,
+                createdAt: now,
+                updatedAt: now.addingTimeInterval(20)
+            ),
+            TaskItem(
+                title: "In progress medium",
+                status: .inProgress,
+                priority: .medium,
+                createdAt: now,
+                updatedAt: now.addingTimeInterval(40)
+            ),
+            TaskItem(
+                title: "Todo high older",
+                status: .todo,
+                priority: .high,
+                createdAt: now,
+                updatedAt: now.addingTimeInterval(10)
+            )
+        ]
+
+        XCTAssertEqual(tasks.sortedForDisplay.map(\.title), [
+            "Todo high recent",
+            "Todo high older",
+            "In progress medium",
+            "Done urgent"
+        ])
+    }
+
+    func testTaskPaginationClampsOutOfRangePageRequests() {
+        let slice = TaskPagination.slice(items: Array(1...5), pageSize: 2, pageIndex: 9)
+
+        XCTAssertEqual(slice.items, [5])
+        XCTAssertEqual(slice.pageIndex, 2)
+        XCTAssertEqual(slice.totalPages, 3)
+        XCTAssertTrue(slice.hasPreviousPage)
+        XCTAssertFalse(slice.hasNextPage)
+    }
+
     private func temporaryURL() -> URL {
         FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)

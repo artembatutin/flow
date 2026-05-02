@@ -282,6 +282,56 @@ struct TaskItem: Identifiable, Codable, Equatable, Hashable {
         self.completedAt = container.decodeSafely(Date.self, forKey: .completedAt)
         self.originalTranscript = container.decodeSafely(String.self, forKey: .originalTranscript)
     }
+
+    static func displaySort(lhs: TaskItem, rhs: TaskItem) -> Bool {
+        if lhs.status == .done, rhs.status != .done {
+            return false
+        }
+        if lhs.status != .done, rhs.status == .done {
+            return true
+        }
+        if lhs.priority.sortRank != rhs.priority.sortRank {
+            return lhs.priority.sortRank > rhs.priority.sortRank
+        }
+        return lhs.updatedAt > rhs.updatedAt
+    }
+}
+
+struct TaskPageSlice<Item> {
+    let items: [Item]
+    let pageIndex: Int
+    let totalPages: Int
+
+    var hasPreviousPage: Bool {
+        pageIndex > 0
+    }
+
+    var hasNextPage: Bool {
+        pageIndex + 1 < totalPages
+    }
+}
+
+enum TaskPagination {
+    static func slice<Item>(items: [Item], pageSize: Int, pageIndex: Int) -> TaskPageSlice<Item> {
+        let normalizedPageSize = max(pageSize, 1)
+        let totalPages = max(Int(ceil(Double(items.count) / Double(normalizedPageSize))), 1)
+        let clampedPageIndex = min(max(pageIndex, 0), totalPages - 1)
+        let startIndex = min(clampedPageIndex * normalizedPageSize, items.count)
+        let endIndex = min(startIndex + normalizedPageSize, items.count)
+        let pageItems = startIndex < endIndex ? Array(items[startIndex..<endIndex]) : []
+
+        return TaskPageSlice(
+            items: pageItems,
+            pageIndex: clampedPageIndex,
+            totalPages: totalPages
+        )
+    }
+}
+
+extension Array where Element == TaskItem {
+    var sortedForDisplay: [TaskItem] {
+        sorted(by: TaskItem.displaySort(lhs:rhs:))
+    }
 }
 
 struct TaskWorkspaceStore: Codable, Equatable {

@@ -11,43 +11,69 @@ import WidgetKit
 
 struct FlowTasksEntry: TimelineEntry {
     let date: Date
-    let tasks: [TaskItem]
+    let openTaskCount: Int
+    let visibleTasks: [TaskItem]
+    let currentPage: Int
+    let totalPages: Int
+    let familyIdentifier: String
     let projectNames: [UUID: String]
 }
 
 struct FlowTasksProvider: TimelineProvider {
     func placeholder(in context: Context) -> FlowTasksEntry {
         let project = TaskProject(name: "Website")
+        let tasks = [
+            TaskItem(title: "Review captured tasks", status: .todo, priority: .high, projectID: project.id),
+            TaskItem(title: "Send a follow-up", status: .inProgress, priority: .medium)
+        ]
 
         return FlowTasksEntry(
             date: Date(),
-            tasks: [
-                TaskItem(title: "Review captured tasks", status: .todo, priority: .high, projectID: project.id),
-                TaskItem(title: "Send a follow-up", status: .inProgress, priority: .medium)
-            ],
+            openTaskCount: tasks.count,
+            visibleTasks: tasks,
+            currentPage: 0,
+            totalPages: 1,
+            familyIdentifier: FlowWidgetLayout.familyIdentifier(for: context.family),
             projectNames: [project.id: project.name]
         )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (FlowTasksEntry) -> Void) {
-        completion(entry())
+        completion(entry(for: context.family))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<FlowTasksEntry>) -> Void) {
-        completion(Timeline(entries: [entry()], policy: .after(Date().addingTimeInterval(60))))
+        completion(Timeline(entries: [entry(for: context.family)], policy: .after(Date().addingTimeInterval(60))))
     }
 
-    private func entry() -> FlowTasksEntry {
+    private func entry(for family: WidgetFamily) -> FlowTasksEntry {
         let workspace = SharedTaskWorkspace.load()
         let projectNames = Dictionary(
             uniqueKeysWithValues: workspace.projects
                 .filter { !$0.isArchived }
                 .map { ($0.id, $0.name) }
         )
+        let familyIdentifier = FlowWidgetLayout.familyIdentifier(for: family)
+        let openTasks = workspace.tasks
+            .sortedForDisplay
+            .filter { $0.status != .done }
+        let currentPage = SharedTaskWorkspace.clampWidgetTaskPageIndex(
+            pageCount: max(Int(ceil(Double(openTasks.count) / Double(FlowWidgetLayout.taskCapacity(for: family)))), 1),
+            for: familyIdentifier
+        )
+        let taskPage = TaskPagination.slice(
+            items: openTasks,
+            pageSize: FlowWidgetLayout.taskCapacity(for: family),
+            pageIndex: currentPage
+        )
 
         return FlowTasksEntry(
             date: Date(),
-            tasks: workspace.tasks.sortedForWidget,
+            openTaskCount: openTasks.count,
+            visibleTasks: taskPage.items,
+            currentPage: taskPage.pageIndex,
+            totalPages: taskPage.totalPages,
+            familyIdentifier: familyIdentifier,
             projectNames: projectNames
         )
     }
@@ -75,14 +101,6 @@ struct FlowTasksWidgetView: View {
 
     let entry: FlowTasksEntry
 
-    private var openTasks: [TaskItem] {
-        entry.tasks.filter { $0.status != .done }
-    }
-
-    private var visibleTasks: [TaskItem] {
-        Array(openTasks.prefix(visibleTaskLimit))
-    }
-
     private var isSmall: Bool {
         family == .systemSmall
     }
@@ -91,30 +109,8 @@ struct FlowTasksWidgetView: View {
         family == .systemExtraLarge
     }
 
-    private var taskCapacity: Int {
-        switch family {
-        case .systemSmall:
-            return 2
-        case .systemMedium:
-            return 3
-        case .systemLarge:
-            return 4
-        case .systemExtraLarge:
-            return 6
-        @unknown default:
-            return 4
-        }
-    }
-
-    private var visibleTaskLimit: Int {
-        if hiddenTaskCount > 0, !isSmall {
-            return max(taskCapacity - 1, 1)
-        }
-        return taskCapacity
-    }
-
-    private var hiddenTaskCount: Int {
-        max(openTasks.count - visibleTasks.count, 0)
+    private var showsPagination: Bool {
+        entry.totalPages > 1
     }
 
     private var tasksURL: URL {
@@ -134,28 +130,26 @@ struct FlowTasksWidgetView: View {
         VStack(alignment: .leading, spacing: isSmall ? 8 : 12) {
             header
 
-            if visibleTasks.isEmpty {
+            if entry.visibleTasks.isEmpty {
                 emptyState
             } else {
                 VStack(spacing: isSmall ? 6 : 8) {
-                    ForEach(visibleTasks) { task in
+                    ForEach(entry.visibleTasks) { task in
                         FlowWidgetTaskRow(
                             task: task,
                             projectName: projectName(for: task),
                             compact: isSmall,
-                            spacious: isExtraLarge
+                            spacious: isExtraLarge && !showsPagination
                         )
-                    }
-
-                    if hiddenTaskCount > 0, !isSmall {
-                        overflowIndicator
                     }
                 }
             }
 
             Spacer(minLength: 0)
 
-            if !isSmall {
+            if showsPagination {
+                paginationControls
+            } else if !isSmall {
                 footer
             }
         }
@@ -178,7 +172,7 @@ struct FlowTasksWidgetView: View {
 
             Spacer(minLength: 0)
 
-            Text("\(openTasks.count) open")
+            Text("\(entry.openTaskCount) open")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 8)
@@ -239,21 +233,49 @@ struct FlowTasksWidgetView: View {
         }
     }
 
-    private var overflowIndicator: some View {
-        Link(destination: tasksURL) {
-            HStack(spacing: 6) {
-                Image(systemName: "ellipsis.circle")
-                    .font(.caption.weight(.semibold))
+    private var paginationControls: some View {
+        HStack(spacing: 10) {
+            paginationButton(
+                iconName: "chevron.up",
+                direction: TaskPageDirection.previous.rawValue,
+                enabled: entry.currentPage > 0
+            )
 
-                Text("\(hiddenTaskCount) more in Flow")
+            VStack(spacing: 4) {
+                Text("Page \(entry.currentPage + 1) of \(entry.totalPages)")
                     .font(.caption.weight(.semibold))
-                    .lineLimit(1)
+                    .foregroundStyle(.primary)
+
+                Text("\(entry.openTaskCount) tasks")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 2)
+            .frame(maxWidth: .infinity)
+
+            paginationButton(
+                iconName: "chevron.down",
+                direction: TaskPageDirection.next.rawValue,
+                enabled: entry.currentPage + 1 < entry.totalPages
+            )
+        }
+    }
+
+    private func paginationButton(iconName: String, direction: String, enabled: Bool) -> some View {
+        Button(intent: ChangeTaskPageIntent(familyIdentifier: entry.familyIdentifier, direction: direction)) {
+            Image(systemName: iconName)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(enabled ? .white : .secondary)
+                .frame(width: 30, height: 30)
+                .background(
+                    enabled
+                        ? AnyShapeStyle(.blue.gradient)
+                        : AnyShapeStyle(.primary.opacity(0.08)),
+                    in: Capsule()
+                )
         }
         .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.7)
     }
 }
 
@@ -352,19 +374,34 @@ private struct FlowWidgetBackground: View {
     }
 }
 
-private extension Array where Element == TaskItem {
-    var sortedForWidget: [TaskItem] {
-        sorted { lhs, rhs in
-            if lhs.status == .done, rhs.status != .done {
-                return false
-            }
-            if lhs.status != .done, rhs.status == .done {
-                return true
-            }
-            if lhs.priority.sortRank != rhs.priority.sortRank {
-                return lhs.priority.sortRank > rhs.priority.sortRank
-            }
-            return lhs.updatedAt > rhs.updatedAt
+private enum FlowWidgetLayout {
+    static func taskCapacity(for family: WidgetFamily) -> Int {
+        switch family {
+        case .systemSmall:
+            return 2
+        case .systemMedium:
+            return 2
+        case .systemLarge:
+            return 3
+        case .systemExtraLarge:
+            return 4
+        @unknown default:
+            return 3
+        }
+    }
+
+    static func familyIdentifier(for family: WidgetFamily) -> String {
+        switch family {
+        case .systemSmall:
+            return "systemSmall"
+        case .systemMedium:
+            return "systemMedium"
+        case .systemLarge:
+            return "systemLarge"
+        case .systemExtraLarge:
+            return "systemExtraLarge"
+        @unknown default:
+            return "unknown"
         }
     }
 }

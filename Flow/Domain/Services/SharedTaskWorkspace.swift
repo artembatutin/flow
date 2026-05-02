@@ -11,6 +11,7 @@ enum SharedTaskWorkspace {
     nonisolated static let appGroupIdentifier = "group.quartzarts.Flow"
     nonisolated static let fileName = "task_workspace.json"
     nonisolated static let widgetKind = "FlowTasksWidget"
+    nonisolated private static let widgetPageKeyPrefix = "widget.task-page"
 
     nonisolated static func fileURL(fileManager: FileManager = .default) throws -> URL {
         if let sharedContainer = fileManager.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
@@ -52,6 +53,28 @@ enum SharedTaskWorkspace {
         try writeWorkspace(workspace, to: url, fileManager: fileManager)
     }
 
+    nonisolated static func widgetTaskPageIndex(for familyIdentifier: String) -> Int {
+        let key = widgetTaskPageKey(for: familyIdentifier)
+        return max(widgetDefaults.integer(forKey: key), 0)
+    }
+
+    @discardableResult
+    nonisolated static func clampWidgetTaskPageIndex(pageCount: Int, for familyIdentifier: String) -> Int {
+        let currentPage = widgetTaskPageIndex(for: familyIdentifier)
+        let clampedPage = min(currentPage, max(pageCount - 1, 0))
+
+        if clampedPage != currentPage {
+            setWidgetTaskPageIndex(clampedPage, for: familyIdentifier)
+        }
+
+        return clampedPage
+    }
+
+    nonisolated static func setWidgetTaskPageIndex(_ pageIndex: Int, for familyIdentifier: String) {
+        let key = widgetTaskPageKey(for: familyIdentifier)
+        widgetDefaults.set(max(pageIndex, 0), forKey: key)
+    }
+
     private nonisolated static func reconcileLegacyWorkspaceIfNeeded(
         with sharedFile: URL,
         fileManager: FileManager
@@ -79,6 +102,14 @@ enum SharedTaskWorkspace {
     private nonisolated static func readWorkspace(at url: URL) -> TaskWorkspaceStore? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(TaskWorkspaceStore.self, from: data)
+    }
+
+    private nonisolated static var widgetDefaults: UserDefaults {
+        UserDefaults(suiteName: appGroupIdentifier) ?? .standard
+    }
+
+    private nonisolated static func widgetTaskPageKey(for familyIdentifier: String) -> String {
+        "\(widgetPageKeyPrefix).\(familyIdentifier)"
     }
 
     private nonisolated static func sharedFileURL(in sharedContainer: URL) -> URL {
