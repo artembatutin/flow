@@ -17,75 +17,98 @@ struct MenuBarView: View {
     @State private var didCopyLastCapture = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             header
-            summaryCard
+            quickInfoRow
+            statsRow
             lastCaptureCard
-            launcherButtons
+            actionRow
             footer
         }
-        .padding(18)
-        .frame(width: 340)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .padding(14)
+        .frame(width: 318)
+        .background(DashboardPalette.background)
     }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 10) {
             Image(systemName: appState.recordingState.iconName)
-                .font(.system(size: 28))
+                .font(.system(size: 26, weight: .medium))
                 .foregroundStyle(statusColor)
                 .symbolEffect(.pulse, isActive: appState.recordingState == .listening)
-                .frame(width: 42, height: 42)
+                .frame(width: 40, height: 40)
                 .background(
                     Circle()
-                        .fill(statusColor.opacity(0.12))
+                        .fill(statusColor.opacity(0.14))
+                )
+                .overlay(
+                    Circle()
+                        .stroke(statusColor.opacity(0.18), lineWidth: 1)
                 )
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(AppBranding.displayName)
                     .font(.title3.weight(.semibold))
 
-                Text(appState.recordingState.displayText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text(headerDetailText)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(DashboardPalette.textSecondary)
+                    .lineLimit(1)
             }
 
             Spacer()
 
             statusBadge
         }
+        .padding(12)
+        .menuCardBackground(emphasized: true)
     }
 
-    private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                summaryMetric(title: "Model", value: settingsStore.selectedModel)
-                Spacer()
-                summaryMetric(title: "Hotkey", value: hotkeyManager.currentKeyCombo.displayName)
-            }
-
-            Divider()
-
-            HStack {
-                summaryMetric(title: "Open Tasks", value: "\(openTaskCount)")
-                Spacer()
-                summaryMetric(title: "Captures", value: "\(sessionManager.sessions.count)")
-            }
+    private var quickInfoRow: some View {
+        HStack(spacing: 8) {
+            compactInfoPill(title: "Model", value: settingsStore.selectedModel)
+            compactInfoPill(title: "Hotkey", value: hotkeyManager.currentKeyCombo.displayName)
         }
-        .padding(14)
-        .menuPanelBackground()
     }
 
-    private func summaryMetric(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title.uppercased())
+    private func compactInfoPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(DashboardPalette.textMuted)
+                .textCase(.uppercase)
             Text(value)
-                .font(.subheadline.weight(.medium))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(DashboardPalette.textPrimary)
                 .lineLimit(1)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .menuCardBackground()
+    }
+
+    private var statsRow: some View {
+        HStack(spacing: 8) {
+            metricTile(title: "Open Tasks", value: "\(openTaskCount)")
+            metricTile(title: "Captures", value: "\(sessionManager.sessions.count)")
+        }
+    }
+
+    private func metricTile(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DashboardPalette.textMuted)
+                .textCase(.uppercase)
+
+            Text(value)
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(DashboardPalette.textPrimary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .menuCardBackground()
     }
 
     private var lastCaptureCard: some View {
@@ -93,7 +116,7 @@ struct MenuBarView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("Last Capture")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(DashboardPalette.textMuted)
                     .textCase(.uppercase)
 
                 Spacer()
@@ -102,58 +125,59 @@ struct MenuBarView: View {
                     copyLastCapture()
                 } label: {
                     Label(didCopyLastCapture ? "Copied" : "Copy", systemImage: didCopyLastCapture ? "checkmark" : "doc.on.doc")
-                        .font(.callout.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(lastCaptureText == nil)
             }
 
             Text(lastCaptureText ?? "No captures yet")
                 .font(.callout.weight(.medium))
-                .foregroundStyle(lastCaptureText == nil ? .secondary : .primary)
-                .lineLimit(2)
+                .foregroundStyle(lastCaptureText == nil ? DashboardPalette.textSecondary : DashboardPalette.textPrimary)
+                .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
-        .menuPanelBackground()
+        .padding(12)
+        .menuCardBackground()
     }
 
-    private var launcherButtons: some View {
+    private var actionRow: some View {
         HStack(spacing: 10) {
             Button {
-                DashboardWindowController.shared.showWindow()
+                dismissMenu {
+                    DashboardWindowController.shared.showWindow()
+                }
             } label: {
-                launcherLabel(title: "Dashboard", systemImage: "square.grid.2x2")
+                actionLabel(title: "Dashboard", systemImage: "square.grid.2x2")
             }
             .buttonStyle(.plain)
 
             Button {
-                SettingsWindowController.shared.showWindow()
+                dismissMenu {
+                    SettingsWindowController.shared.showWindow()
+                }
             } label: {
-                launcherLabel(title: "Settings", systemImage: "gearshape")
+                actionLabel(title: "Settings", systemImage: "gearshape")
             }
             .buttonStyle(.plain)
         }
     }
 
-    private func launcherLabel(title: String, systemImage: String) -> some View {
-        HStack(spacing: 9) {
+    private func actionLabel(title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
             Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .frame(width: 22)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: 18)
 
             Text(title)
                 .font(.callout.weight(.semibold))
         }
-        .foregroundStyle(.primary)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .foregroundStyle(DashboardPalette.textPrimary)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
+        .padding(.vertical, 10)
+        .menuCardBackground()
     }
 
     private var footer: some View {
@@ -164,8 +188,10 @@ struct MenuBarView: View {
                 NSApp.terminate(nil)
             }
             .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(DashboardPalette.textSecondary)
         }
+        .padding(.top, 2)
     }
 
     private var statusBadge: some View {
@@ -173,21 +199,38 @@ struct MenuBarView: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(statusColor)
             .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(
+            .padding(.vertical, 4)
+            .background {
                 Capsule()
-                    .fill(statusColor.opacity(0.12))
-            )
+                    .fill(statusColor.opacity(0.14))
+                    .overlay(
+                        Capsule()
+                            .stroke(statusColor.opacity(0.22), lineWidth: 1)
+                    )
+            }
     }
 
     private var statusBadgeText: String {
         switch appState.recordingState {
         case .idle:
-            return "Ready"
+            return "Idle"
         case .listening, .processing:
             return "Active"
         case .error:
             return "Error"
+        }
+    }
+
+    private var headerDetailText: String {
+        switch appState.recordingState {
+        case .idle:
+            return "Press \(hotkeyManager.currentKeyCombo.displayName) to start"
+        case .listening:
+            return "Listening for your next capture"
+        case .processing:
+            return "Processing the latest capture"
+        case .error(let message):
+            return message
         }
     }
 
@@ -232,13 +275,26 @@ struct MenuBarView: View {
             didCopyLastCapture = false
         }
     }
+
+    private func dismissMenu(then action: @escaping () -> Void) {
+        let menuWindow = NSApp.keyWindow
+        menuWindow?.close()
+
+        DispatchQueue.main.async {
+            action()
+        }
+    }
 }
 
 private extension View {
-    func menuPanelBackground() -> some View {
+    func menuCardBackground(emphasized: Bool = false) -> some View {
         background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
+                .fill(emphasized ? DashboardPalette.surfaceTertiary.opacity(0.26) : DashboardPalette.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(DashboardPalette.outlineSoft, lineWidth: 1)
+                )
         )
     }
 }
